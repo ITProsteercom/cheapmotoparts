@@ -1,0 +1,23 @@
+{
+  "development": {
+    "username": "root",
+    "password": "",
+    "database": "cheapmotoparts",
+    "host": "localhost",
+    "dialect": "mysql"
+  },
+  "test": {
+    "username": "root",
+    "password": null,
+    "database": "cheapmotoparts",
+    "host": "localhost",
+    "dialect": "mysql"
+  },
+  "production": {
+    "username": "remote",
+    "password": "6d47Fp",
+    "database": "cheammn_oc2",
+    "host": "localhost",
+    "dialect": "mysql"
+  }
+}

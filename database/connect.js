@@ -4,12 +4,12 @@ const Sequelize = require('sequelize');
 var connect = function (config) {
 
     return new Sequelize(
-        config.db.name,
-        config.db.username,
-        config.db.username,
+        config.database,
+        config.username,
+        config.password,
         {
-            host: config.db.host,
-            dialect: config.db.dialect,
+            host: config.host,
+            dialect: config.dialect,
             operatorsAliases: false
         }
     );

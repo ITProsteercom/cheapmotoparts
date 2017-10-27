@@ -11,6 +11,7 @@
   "license": "ISC",
   "devDependencies": {
     "mocha": "^4.0.1",
+    "sequelize-cli": "^3.0.0",
     "should": "^13.1.2",
     "should-http": "^0.1.1"
   },
