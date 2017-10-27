@@ -6,7 +6,7 @@ var connect = function (config) {
     return new Sequelize(
         config.db.name,
         config.db.username,
-        config.db.password,
+        config.db.username,
         {
             host: config.db.host,
             dialect: config.db.dialect,
