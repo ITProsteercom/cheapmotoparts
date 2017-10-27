@@ -1,3 +1,1 @@
-var request = require('request');
-
-
+const config = require('config.json')('./config.json');
