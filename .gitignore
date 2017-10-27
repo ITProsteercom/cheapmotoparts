@@ -1,0 +1,28 @@
+# Compiled sources
+/dist
+
+# Node packages
+/node_modules
+
+# Configuration files
+*.env
+
+# IDEs/editors
+.idea
+*.sublime-project
+.vimrc
+
+# Temporary files
+/tmp
+/cache
+/input
+*.log
+npm-debug.log
+.~lock*
+*/.DS_Store
+
+# Development
+src/poligon.js
+package-lock.json
+forever-err.log
+forever-out.log
