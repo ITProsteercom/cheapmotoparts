@@ -1,23 +1,21 @@
 {
-  "development": {
+  "parser": {
     "username": "root",
     "password": "",
-    "database": "cheapmotoparts",
+    "database": "parser",
     "host": "localhost",
     "dialect": "mysql"
   },
-  "test": {
-    "username": "root",
-    "password": null,
-    "database": "cheapmotoparts",
-    "host": "localhost",
-    "dialect": "mysql"
-  },
-  "production": {
+  "opencart": {
     "username": "remote",
     "password": "6d47Fp",
     "database": "cheammn_oc2",
     "host": "localhost",
     "dialect": "mysql"
+  },
+  "partzilla": {
+    "url": "https://partzilla.com",
+    "login": "kirlik_68@mail.ru",
+    "password": "l23456789l"
   }
 }

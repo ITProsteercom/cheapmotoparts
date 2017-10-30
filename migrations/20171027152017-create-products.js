@@ -1,17 +1,27 @@
 'use strict';
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('parser_products', {
+    return queryInterface.createTable('products', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      sku: {
-        type: Sequelize.STRING
+      category_id: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        defaultValue: null,
+        references: {
+          model: 'categories',
+          key: 'id'
+        }
       },
-      partzilla_url: {
+      sku: {
+        type: Sequelize.STRING,
+        unique: true
+      },
+      url: {
         type: Sequelize.STRING
       },
       opencart_id: {
@@ -26,6 +36,6 @@ module.exports = {
     });
   },
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('parser_products');
+    return queryInterface.dropTable('products');
   }
 };

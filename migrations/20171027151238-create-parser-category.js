@@ -1,7 +1,7 @@
 'use strict';
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('parser_categories', {
+    return queryInterface.createTable('categories', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -13,15 +13,20 @@ module.exports = {
         allowNull: true,
         defaultValue: null,
         references: {
-          model: 'parser_categories',
+          model: 'categories',
           key: 'id'
         }
       },
       name: {
+        type: Sequelize.STRING,
+        unique: true
+      },
+      url: {
         type: Sequelize.STRING
       },
-      partzilla_url: {
-        type: Sequelize.STRING
+      opencart_id: {
+        type: Sequelize.INTEGER,
+        allowNull: true
       },
       updatedAt: {
         allowNull: false,
@@ -31,6 +36,6 @@ module.exports = {
     });
   },
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('parser_categories');
+    return queryInterface.dropTable('categories');
   }
 };

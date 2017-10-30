@@ -1,15 +1,16 @@
 'use strict';
 module.exports = (sequelize, DataTypes) => {
-  var parser_category = sequelize.define('Category', {
-    parent_id: DataTypes.INT,
-    name: DataTypes.STRING,
-    partzilla_url: DataTypes.STRING
+  var Product = sequelize.define('Products', {
+    sku: DataTypes.STRING,
+    url: DataTypes.STRING
   }, {
+    tableName: 'products',
+    createdAt: false,
     classMethods: {
       associate: function(models) {
         // associations can be defined here
       }
     }
   });
-  return parser_category;
+  return Product;
 };

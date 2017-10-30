@@ -25,7 +25,7 @@ describe('	Parse', function() {
 
 			var url = "https://partzilla.com/catalog";
 
-			parse.getRequest(url, function(err, res, body){
+			parse.getRequest(url, function(err, res, body) {
 				
 				parsePartzilla.getManufacturers(body).should.be.not.empty();
 				done();
