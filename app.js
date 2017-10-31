@@ -4,16 +4,16 @@ const db = require('./models');
 
 const appController = require('./controllers/appController');
 
-run()
+run().then(function() {
+        console.log('............done!');
+    })
     .catch(function(err) {
         console.error(err);
     });
 
 async function run() {
 
-    let url = config["partzilla"]["url"] + "/catalog";
-
-    var cats = await appController.upsertCategories(url);
+    await appController.upsertCategories();
 
     db.sequelize.close();
 }

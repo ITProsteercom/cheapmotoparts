@@ -5,7 +5,7 @@ async function getCategoties(html_page) {
     var $ = await cheerio.load(html_page);
     var categories = [];
 
-    $('table').last().find('a').each(function(i, elem) {
+    $('.catalog-table').find('table').last().find('a').each(function(i, elem) {
 
         categories[i] = {
             name: $(this).text(),

@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
     url: DataTypes.STRING
   }, {
     tableName: 'categories',
-    timestamps: false,
+    timestamps: true,
     createdAt: false,
     classMethods: {
       associate: function(models) {
