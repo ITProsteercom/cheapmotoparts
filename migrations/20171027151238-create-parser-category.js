@@ -18,11 +18,11 @@ module.exports = {
         }
       },
       name: {
-        type: Sequelize.STRING,
-        unique: true
+        type: Sequelize.STRING
       },
       url: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        unique: true
       },
       opencart_id: {
         type: Sequelize.INTEGER,

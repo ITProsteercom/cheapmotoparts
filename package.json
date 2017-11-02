@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./app.js",
-    "test": "mocha -R spec tests"
+    "test": "mocha -R spec tests",
+    "db:refresh": "npm run db:drop && npm run db:create && npm run db:migrate",
+    "db:drop": "node_modules/.bin/sequelize db:drop --env parser",
+    "db:create": "node_modules/.bin/sequelize db:create --env parser",
+    "db:migrate": "node_modules/.bin/sequelize db:migrate --env parser"
   },
   "author": "",
   "license": "ISC",
@@ -19,8 +23,12 @@
     "bluebird": "^3.5.1",
     "cheerio": "^1.0.0-rc.2",
     "config.json": "0.0.4",
+    "debug": "^3.1.0",
+    "dotenv": "^4.0.0",
     "mysql2": "^1.4.2",
+    "needle": "^2.0.1",
     "request": "^2.83.0",
-    "sequelize": "^4.19.0"
+    "sequelize": "^4.19.0",
+    "tress": "^1.0.5"
   }
 }

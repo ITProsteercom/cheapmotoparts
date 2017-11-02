@@ -1,19 +1,21 @@
-//const env = process.env.NODE_ENV || 'development';
-const config = require('config.json')('./config/config.json');
-const db = require('./models');
+const ENV = require('dotenv').load().parsed;
+const db = require('./models/database');
+const debug = require('debug')('app');
 
 const appController = require('./controllers/appController');
 
 run().then(function() {
-        console.log('............done!');
+        debug('Done');
     })
     .catch(function(err) {
-        console.error(err);
+        debug('Errors: ', err);
     });
 
 async function run() {
 
-    await appController.upsertCategories();
+    debug(`Parser started`);
+
+    await appController.loadDataFromPartzilla();
 
     db.sequelize.close();
 }

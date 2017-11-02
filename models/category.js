@@ -1,6 +1,6 @@
 'use strict';
 module.exports = (sequelize, DataTypes) => {
-  var Category = sequelize.define('Category', {
+  const Category = sequelize.define('Category', {
     parent_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -10,20 +10,25 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       },
     },
-    name: {
+    name: DataTypes.STRING,
+    url: {
       type: DataTypes.STRING,
       unique: true
-    },
-    url: DataTypes.STRING
+    }
   }, {
     tableName: 'categories',
     timestamps: true,
-    createdAt: false,
-    classMethods: {
-      associate: function(models) {
-        // associations can be defined here
-      }
-    }
+    createdAt: false
   });
+
+  Category.upsertBulkAndReturn = async function (arCategories, parent_id) {
+
+    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url']});
+
+    return Category.findAll({
+        where: {parent_id: parent_id}
+      });
+  };
+
   return Category;
 };
