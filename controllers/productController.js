@@ -1,9 +1,20 @@
 const cheerio = require('cheerio');
 const debug = require('debug')('productController');
+
 const Product = require('../models/database').Product;
+
+async function loadProducts(html, parent_id) {
+
+    let productsPartzilla = await parseComponentProducts(html, parent_id);
+
+    return await saveComponentProducts(productsPartzilla, parent_id);
+}
 
 
 async function saveComponentProducts(products, category_id) {
+
+    if(products.length <= 0)
+        return [];
 
     return await Product.upsertBulkAndReturn(products, category_id);
 }
@@ -22,7 +33,7 @@ async function parseComponentProducts(html, category_id) {
         let qty = $(item).find('td.tabQty').find('input[name="qty"]').val();
 
         let prices = $(item).find('td').eq(2).html().split('<br>');
-        let price = +prices[prices.length-1].replace(/[$Unavailable]/g, '');
+        let price = +prices[prices.length-1].replace(/[$Unavailable]/g, '');//get last price
 
         let data = {
             category_id: category_id,
@@ -41,6 +52,5 @@ async function parseComponentProducts(html, category_id) {
 }
 
 module.exports = {
-    saveComponentProducts,
-    parseComponentProducts
+    loadProducts
 }

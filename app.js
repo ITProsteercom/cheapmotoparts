@@ -14,8 +14,13 @@ run().then(function() {
 async function run() {
 
     debug(`Parser started`);
-
-    await appController.loadDataFromPartzilla();
+    try {
+        await appController.load();
+    }
+    catch (e) {
+        debug(e);
+    }
+    debug('.....loading done');
 
     db.sequelize.close();
 }
