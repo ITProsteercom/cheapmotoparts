@@ -17,12 +17,25 @@ module.exports = {
           key: 'id'
         }
       },
+      name: {
+        type: Sequelize.STRING
+      },
       sku: {
-        type: Sequelize.STRING,
-        unique: true
+        type: Sequelize.STRING
       },
       url: {
         type: Sequelize.STRING
+      },
+      diagram_number: {
+        type: Sequelize.INTEGER
+      },
+      price: {
+        type: Sequelize.FLOAT,
+        allowNull: true,
+      },
+      required_quantity: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
       },
       opencart_id: {
         type: Sequelize.INTEGER,

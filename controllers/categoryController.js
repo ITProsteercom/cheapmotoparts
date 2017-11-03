@@ -6,9 +6,11 @@ const Promise = require('bluebird');
 const tress = require('tress');
 const needle = require('needle');
 
+const productController = require('./productController');
+
 async function loadCategories(url = '/catalog') {
 
-    debug('loading categories strating from '+ url);
+    debug('loading categories starting from '+ url);
 
     return new Promise(function (resolve, reject) {
 
@@ -51,18 +53,28 @@ async function loadCategories(url = '/catalog') {
                 }
                 else {
 
-                    //TODO: Parse products here
-                    reject("Parse products here");
+                    //Parse products here
+                    let productsPartzilla = await productController.parseComponentProducts(res.body, parent_id);
+
+                    if(productsPartzilla.length > 0) {
+
+                        let products = await productController.saveComponentProducts(productsPartzilla, parent_id);
+                        debug(products.length + ' products were added/updated');
+                    }
+                    else {
+                        throw new Error('Parse no products in component ' + url);
+                    }
+
+                    //reject("Parse products here");
                 }
 
-
-
-                callback(); //cal callback in the end
+                callback(); //call callback in the end
             });
         }, 10); // run 10 parallel streams
 
         q.drain = function(){
             debug('tressCategories done');
+            resolve(false);
         }
 
         //add initial url to query

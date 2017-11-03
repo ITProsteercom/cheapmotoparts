@@ -26,7 +26,8 @@ module.exports = {
       },
       opencart_id: {
         type: Sequelize.INTEGER,
-        allowNull: true
+        allowNull: true,
+        defaultValue: null
       },
       updatedAt: {
         allowNull: false,

@@ -1,5 +1,6 @@
 'use strict';
 module.exports = (sequelize, DataTypes) => {
+
   const Category = sequelize.define('Category', {
     parent_id: {
       type: DataTypes.INTEGER,
@@ -10,10 +11,17 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       },
     },
-    name: DataTypes.STRING,
+    name: {
+      type: DataTypes.STRING
+    },
     url: {
       type: DataTypes.STRING,
       unique: true
+    },
+    opencart_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null
     }
   }, {
     tableName: 'categories',

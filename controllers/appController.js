@@ -7,13 +7,16 @@ async function loadDataFromPartzilla() {
     debug('loadDataFromPartzilla start');
 
     try {
-        await categoryController.loadCategories('/catalog/yamaha/snowmobile/2017');
+        await categoryController.loadCategories('/catalog');
     }
     catch(e) {
         debug(e);
     }
 
     debug('loadDataFromPartzilla done');
+
+
+
 }
 
 module.exports = {
