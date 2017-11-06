@@ -19,7 +19,8 @@ module.exports = (sequelize, DataTypes) => {
       unique: true
     },
     url: {
-      type: DataTypes.STRING
+      type: DataTypes.STRING,
+      unique: true
     },
     diagram_number: {
       type: DataTypes.INTEGER
@@ -45,7 +46,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Product.upsertBulkAndReturn = async function (arProducts, category_id) {
 
-    await Product.bulkCreate(arProducts, {updateOnDuplicate: ['category_id', 'name', 'sku', 'url', 'diagram_number', 'price', 'required_quantity']});
+    await Product.bulkCreate(arProducts, {updateOnDuplicate: ['category_id', 'name', 'sku', 'url', 'price', 'required_quantity']});
 
     return Product.findAll({
       where: {category_id: category_id}

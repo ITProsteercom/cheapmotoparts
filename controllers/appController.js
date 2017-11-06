@@ -3,10 +3,14 @@ const debug = require('debug')('appController');
 const needle = require('needle');
 const tress = require('tress');
 
+const authController = require('./authController');
 const categoryController = require('./categoryController');
 const productController = require('./productController');
 
+
 async function load(url = '/catalog') {
+
+    var cookiePartzilla = await authController.authPartzilla(config['partzilla']);
 
     return new Promise(async function(resolve, reject) {
 
@@ -15,7 +19,7 @@ async function load(url = '/catalog') {
         var q = tress(function(item, callback) {
 
             //process requested url
-            needle.get(config["partzilla"]["url"] + item.url, async function(err, res) {
+            needle.get(config["partzilla"]["url"] + item.url, {cookies: cookiePartzilla}, async function(err, res) {
                 if (err || res.statusCode !== 200) {
                     debug((err || res.statusCode) + ' - ' + item.url);
                     throw err;
