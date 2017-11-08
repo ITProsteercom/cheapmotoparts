@@ -1,5 +1,5 @@
 const cheerio = require('cheerio');
-const debug = require('debug')('categoryController');
+const debug = require('debug')('controller:category');
 
 const Category = require('../models/database').Category;
 

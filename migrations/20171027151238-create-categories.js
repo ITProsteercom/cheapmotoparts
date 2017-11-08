@@ -29,7 +29,7 @@ module.exports = {
         allowNull: true,
         defaultValue: null
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
         defaultValue: new Date()

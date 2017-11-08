@@ -1,5 +1,5 @@
 const needle = require('needle');
-const debug = require('debug')('authController');
+const debug = require('debug')('controller:auth');
 
 async function authPartzilla(credentials) {
 

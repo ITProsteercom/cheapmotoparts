@@ -1,15 +1,13 @@
 'use strict';
+
 module.exports = (sequelize, DataTypes) => {
 
   const Product = sequelize.define('Product', {
-    category_id: {
+    id: {
       type: DataTypes.INTEGER,
-      allowNull: true,
-      defaultValue: null,
-      references: {
-        model: 'categories',
-        key: 'id'
-      },
+      primaryKey: true,
+      autoIncrement: true,
+      unique:true
     },
     name: {
       type: DataTypes.STRING
@@ -22,15 +20,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       unique: true
     },
-    diagram_number: {
-      type: DataTypes.INTEGER
-    },
     price: {
       type: DataTypes.FLOAT,
-      allowNull: true,
-    },
-    required_quantity: {
-      type: DataTypes.INTEGER,
       allowNull: true,
     },
     opencart_id: {
@@ -40,17 +31,20 @@ module.exports = (sequelize, DataTypes) => {
     }
   }, {
     tableName: 'products',
+    underscored: true,
     timestamps: true,
     createdAt: false
   });
 
-  Product.upsertBulkAndReturn = async function (arProducts, category_id) {
+  Product.upsertBulkAndReturn = async function (arProducts) {
 
-    await Product.bulkCreate(arProducts, {updateOnDuplicate: ['category_id', 'name', 'sku', 'url', 'price', 'required_quantity']});
+    await Product.bulkCreate(arProducts, {updateOnDuplicate: ['name', 'sku', 'url', 'price']});
 
-    return Product.findAll({
-      where: {category_id: category_id}
+    let arSku = arProducts.map(function (product) {
+      return product.sku;
     });
+
+    return await Product.findAll({where: {sku: arSku}});
   };
 
   return Product;

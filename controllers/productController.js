@@ -1,26 +1,37 @@
 const cheerio = require('cheerio');
-const debug = require('debug')('productController');
+const debug = require('debug')('controller:product');
 
 const Product = require('../models/database').Product;
 
-async function loadProducts(html, parent_id) {
+async function loadProducts(html) {
 
-    let productsPartzilla = await parseComponentProducts(html, parent_id);
+    let productsPartzilla = await parseComponentProducts(html);
 
-    return await saveComponentProducts(productsPartzilla, parent_id);
+    let productsDB = await saveComponentProducts(productsPartzilla);
+
+    return productsPartzilla.map(function (product) {
+
+        let productDB = productsDB.find(function(productDB) {
+            return product.sku == productDB.sku;
+        });
+
+        product.id = productDB.id;
+
+        return product;
+    });
 }
 
 
-async function saveComponentProducts(products, category_id) {
+async function saveComponentProducts(products) {
 
     if(products.length <= 0)
         return [];
 
-    return await Product.upsertBulkAndReturn(products, category_id);
+    return await Product.upsertBulkAndReturn(products);
 }
 
 
-async function parseComponentProducts(html, category_id) {
+async function parseComponentProducts(html) {
 
     let $ = await cheerio.load(html);
     let products = [];
@@ -36,13 +47,12 @@ async function parseComponentProducts(html, category_id) {
         let price = +prices[prices.length-1].replace(/[$Unavailable]/g, '');//get last price
 
         let data = {
-            category_id: category_id,
             name: name.replace(/\s{2,}\sNot Available/g, ' ').trim(), //cut string Not Available and spaces
             url: url,
             sku: $(item).find('td').eq(1).find('a').eq(1).text(),
             price: price,
             diagram_number: diagram ? diagram.replace(/(?:\t|\n|\r|\f)/g, '') : null,
-            required_quantity: (typeof qty != 'undefined') ? +qty.replace(/\D/g, '') : null,
+            required_quantity: (typeof qty != 'undefined') ? +qty.replace(/\D/g, '') : null
         };
 
         products.push(data);

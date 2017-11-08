@@ -8,40 +8,25 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      category_id: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        defaultValue: null,
-        references: {
-          model: 'categories',
-          key: 'id'
-        }
-      },
       name: {
         type: Sequelize.STRING
       },
       sku: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        unique: true
       },
       url: {
         type: Sequelize.STRING
       },
-      diagram_number: {
-        type: Sequelize.INTEGER
-      },
       price: {
         type: Sequelize.FLOAT,
-        allowNull: true,
-      },
-      required_quantity: {
-        type: Sequelize.INTEGER,
         allowNull: true,
       },
       opencart_id: {
         type: Sequelize.INTEGER,
         allowNull: true
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
         defaultValue: new Date()
