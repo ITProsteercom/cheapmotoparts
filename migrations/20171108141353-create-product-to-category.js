@@ -35,7 +35,9 @@ module.exports = {
         type: Sequelize.DATE,
         defaultValue: new Date()
       }
-    }, );
+    }, ).then(function() {
+      return queryInterface.addIndex('product_to_category', {unique: true, fields: ['product_id', 'category_id', 'diagram_number']});
+    });
   },
   down: (queryInterface, Sequelize) => {
     return queryInterface.dropTable('product_to_category');

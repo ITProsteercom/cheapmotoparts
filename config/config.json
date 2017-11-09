@@ -17,5 +17,10 @@
     "url": "https://partzilla.com",
     "login": "kirlik_68@mail.ru",
     "password": "1234567891"
+  },
+  "default": {
+    "make": ["Honda", "Kawasaki", "Suzuki", "Yamaha"],
+    "cat": ["Motorcycle"],
+    "year": 2015
   }
 }

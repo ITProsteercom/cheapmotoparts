@@ -23,6 +23,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
     },
   }, {
+      indexes: [
+      {
+        unique: true,
+        fields: ['product_id', 'category_id', 'diagram_number']
+      }
+    ],
     tableName: 'product_to_category',
     underscored: true,
     timestamps: true,

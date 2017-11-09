@@ -1,5 +1,5 @@
 const config = require('config.json')('./config/config.json');
-const debug = require('debug')('сontroller:app');
+const debug = require('debug')('controller:app');
 const log = require('cllc')();
 const needle = require('needle');
 const tress = require('tress');
@@ -9,14 +9,6 @@ const categoryController = require('./categoryController');
 const productController = require('./productController');
 const productToCategoryController = require('./productToCategoryController');
 
-//depth level - category name
-var categoryChain = {
-    1: 'make',
-    2: 'category',
-    3: 'year',
-    4: 'model',
-    5: 'component'
-};
 
 async function load(url = '/catalog') {
 
@@ -25,6 +17,7 @@ async function load(url = '/catalog') {
     return new Promise(async function(resolve, reject) {
 
         log.start('Найдено категорий %s, Найдено товаров %s.');
+
         //reqursive scraping with tress
         var q = tress(async function(item, callback) {
 
@@ -35,7 +28,7 @@ async function load(url = '/catalog') {
                 async function(err, res) {
 
                     if (err || res.statusCode !== 200) {
-                        log.e((err || res.statusCode) + ' - ' + url);
+                        log.w((err || res.statusCode) + ' - ' + url);
                         return callback(true); // return url at the beginning of th e turn
                     }
 
@@ -43,7 +36,6 @@ async function load(url = '/catalog') {
                     let categories = await categoryController.loadCategories(res.body, item.id);
 
                     if(categories.length > 0) {
-
                         q.push(categories);//add next categories to query
                         log.step(categories.length);
                         callback(); //call callback in the end
@@ -63,18 +55,18 @@ async function load(url = '/catalog') {
 
         q.drain = function() {
             log.finish();
-            log.i('Loading of categories and product is finished!');
+            log.i('Loading of categories and products is finished!');
             resolve(false);
         }
 
-        q.retry = function(){
+        q.retry = function() {
             q.pause();
-            // в this лежит возвращённая в очередь задача.
-            log.i('Paused on:', this);
+            // this - task returned to the turn
+            log.i('Paused on:', this.url);
             setTimeout(function(){
                 q.resume();
                 log.i('Resumed');
-            }, 300000); // 5 минут
+            }, 300000); // 5 minutes
         }
 
         //add initial url to query
