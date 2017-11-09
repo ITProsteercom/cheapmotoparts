@@ -16,7 +16,8 @@ async function run() {
 
     log.i('Parser started');
     try {
-        await appController.load('/catalog/yamaha/motorcycle/2017/xvs95chs');
+        // /catalog/yamaha/motorcycle/2017/xvs95chs/seat
+        await appController.load('/catalog');
     }
     catch (e) {
         debug(e);

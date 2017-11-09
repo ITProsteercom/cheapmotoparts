@@ -33,9 +33,10 @@ async function load(url = '/catalog') {
                 config["partzilla"]["url"] + item.url,
                 {cookies: cookiePartzilla},
                 async function(err, res) {
+
                     if (err || res.statusCode !== 200) {
-                        debug((err || res.statusCode) + ' - ' + item.url);
-                        throw err;
+                        log.e((err || res.statusCode) + ' - ' + url);
+                        return callback(true); // return url at the beginning of th e turn
                     }
 
                     //parse and save categories
@@ -50,7 +51,9 @@ async function load(url = '/catalog') {
                     else {
                         //parse and save products
                         let products = await productController.loadProducts(res.body);
+                        //add products to categories associations
                         await productToCategoryController.saveProductsToCategory(products, item.id);
+
                         log.step(0, products.length);
                         callback();
                     }
@@ -58,20 +61,21 @@ async function load(url = '/catalog') {
 
         }, 10); // run 10 parallel streams
 
-        // q.success = function() {
-        //     debug('Job successfully finished.');
-        //     //resolve(false);
-        // }
-
         q.drain = function() {
             log.finish();
             log.i('Loading of categories and product is finished!');
             resolve(false);
         }
 
-        // q.error = function(err) {
-        //     reject(err);
-        // };
+        q.retry = function(){
+            q.pause();
+            // в this лежит возвращённая в очередь задача.
+            log.i('Paused on:', this);
+            setTimeout(function(){
+                q.resume();
+                log.i('Resumed');
+            }, 300000); // 5 минут
+        }
 
         //add initial url to query
         q.push({
