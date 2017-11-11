@@ -10,15 +10,19 @@ module.exports = {
       },
       parent_id: {
         type: Sequelize.INTEGER,
-        allowNull: true,
-        defaultValue: null,
-        references: {
-          model: 'categories',
-          key: 'id'
-        }
+        // allowNull: true,
+        // defaultValue: null,
+        // references: {
+        //   model: 'categories',
+        //   key: 'id'
+        // }
       },
       name: {
         type: Sequelize.STRING
+      },
+      depth_level: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false
       },
       url: {
         type: Sequelize.STRING,

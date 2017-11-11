@@ -27,6 +27,23 @@ async function authPartzilla(credentials) {
     });
 }
 
+async function getCookiesPartshouse(manufacturer) {
+
+    let url = 'https://www.'+manufacturer.toLowerCase()+'partshouse.com';
+
+    return new Promise((resolve, reject) => {
+
+        // get cookies from partzilla
+        needle.get(url, function(err, response){
+            if (err || response.statusCode != 200)
+                reject(err || response.statusCode);
+
+            resolve(response.cookies);
+        });
+    });
+}
+
 module.exports = {
-    authPartzilla
+    authPartzilla,
+    getCookiesPartshouse
 };

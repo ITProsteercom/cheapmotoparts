@@ -1,4 +1,5 @@
 var default_config = require(__dirname + '/../config/config.json')["default"];
+const ProgressBar = require('process');
 
 function setAppConfig(arConfig, argv) {
     let appConfig = {};
@@ -22,7 +23,9 @@ function setConfig(consoleList, defaultList) {
 }
 
 function formatTitleCase(str) {
+    console.log(str);
     return str
+        .toString()
         .toLowerCase()
         .split(',')
         .map(function(word) {
@@ -30,6 +33,20 @@ function formatTitleCase(str) {
         });
 }
 
+function createProgressBar(string, total) {
+
+    return new ProgressBar(
+        `${string.padEnd(25)} [:bar] (:current/:total, :percent) Time: :elapseds/:etas`,
+        {
+            total: total,
+            complete: '=',
+            incomplete: ' ',
+            width: 40,
+        }
+    );
+}
+
 module.exports = {
-    setAppConfig
+    setAppConfig,
+    createProgressBar
 };

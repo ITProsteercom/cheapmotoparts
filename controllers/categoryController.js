@@ -40,8 +40,7 @@ function filterCategories(categoryList) {
     if(categoryList.length == 0)
         return [];
 
-    let depth_level = categoryList[0].url.slice(1).split('/').length - 1;
-    let category_type = categoryChain[depth_level];
+    let category_type = categoryChain[getDepthLevel(categoryList[0].url)];
     let filterUrl = global.appConfig[category_type];
 
     if(typeof filterUrl === 'undefined' || filterUrl == null)
@@ -62,18 +61,49 @@ async function parseCategoties(html_page, parent_id) {
     var $ = await cheerio.load(html_page);
     var categories = [];
 
-    $('.catalog-table').find('table').last().find('a').each(function(i, elem) {
+    $('.catalog-table').find('table').last().find('a').each(function(i) {
+
+        let url = $(this).attr('href');
 
         categories[i] = {
+            parent_id: parent_id,
             name: $(this).text(),
-            url: $(this).attr('href'),
-            parent_id: parent_id
+            //depth_level: getDepthLevel(url),
+            url: url
         };
     });
 
     return categories;
 }
 
+function getDepthLevel(url) {
+
+    return url.slice(1).split('/').length - 1;
+}
+
+async function getComponentsCount() {
+
+    return await Category.count({
+            where: {
+                depth_level: 5
+            }
+        });
+}
+
+async function getComponents(limit = 0) {
+
+    return await Category.findAll({
+        where: { id: 3 },
+        include: [{
+            model: Category,
+            as: 'ancestors'
+        }],
+        order: [ [ { model: Category, as: 'ancestors' }, 'depth_level' ] ]
+    });
+}
+
 module.exports = {
-    loadCategories
+    loadCategories,
+    getComponentsCount,
+    getComponents
 };

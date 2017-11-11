@@ -7,7 +7,7 @@ const argv = require('yargs').argv;
 
 const appController = require('./controllers/appController');
 
-global.appConfig = utils.setAppConfig(['make', 'cat', 'year'], argv);
+global.appConfig = utils.setAppConfig(['make', 'cat', 'year', 'model'], argv);
 
 run().then(function() {
         log.i('Complete');
@@ -21,7 +21,7 @@ async function run() {
     log.i('Parser started');
     try {
         // /catalog/yamaha/motorcycle/2017/xvs95chs/seat
-        await appController.load('/catalog/yamaha/motorcycle/2017/xvs95chs');
+        await appController.load('/catalog');
     }
     catch (e) {
         debug(e);

@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./app.js --make default --cat default --year default",
+    "demo": "node ./app.js --make Honda --cat Motorcycle --year 2018",
     "test": "mocha -R spec tests",
     "db:refresh": "npm run db:drop && npm run db:create && npm run db:migrate",
     "db:drop": "node_modules/.bin/sequelize db:drop --env parser",
@@ -25,8 +26,10 @@
     "dotenv": "^4.0.0",
     "mysql2": "^1.4.2",
     "needle": "^2.0.1",
+    "progress": "^2.0.0",
     "request": "^2.83.0",
-    "sequelize": "^4.19.0",
+    "sequelize": "^4.22.6",
+    "sequelize-hierarchy": "github:deksden/sequelize-hierarchy",
     "tress": "^1.0.5",
     "yargs": "^10.0.3"
   }
