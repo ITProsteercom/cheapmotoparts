@@ -1,38 +1,309 @@
-const { createProgressBar } = require('./utils');
+//require('dotenv').load();
+const cheerio = require('cheerio');
+const debug = require('debug')('controller:diagram');
+const log = require('cllc')();
+const needle = require('needle');
+const tress = require('tress');
+var Promise = require("bluebird");
 
 const db = require('../models/database');
-var Promise = require("bluebird");
+
 const authController = require('./authController');
 const categoryController = require('./categoryController');
+const { createProgressBar } = require('./utils');
 
-// authController.getCookiesPartshouse('Honda').then(function(res) {
-//     console.log(res);
-// });
+parse();
 
-const limit = 10;
+async function parse() {
 
-async function parseDiagrams() {
+    var q = tress(queryParsingCallback, 5);// 5 parallel streams
+    var componentsToUpdate = [];
 
-    let componentsTotal = await categoryController.getComponentsCount();
-    let componentsHandled = 0;
+    q.retry = function () {
+        q.pause();
+        // this - task returned to the turn
+        log.i('Paused on:', this.url);
+        setTimeout(function () {
+            q.resume();
+            log.i('Resumed');
+        }, 60000); // 1 minute
+    };
 
-    console.log(componentsTotal);
+    q.drain = async function () {
+        log.i('...finish processing data');
 
-    let cats = await categoryController.getComponents();
+        db.sequelize.close();
+    };
 
-    Promise.map(cats, function(cat, index) {
-        console.log(index);
-        console.log(JSON.stringify(cat));
-    });
-/*
-    const progress = createProgressBar('loading diagrams', componentsTotal);
+    q.success = async function() {
 
-    while(componentsHandled < componentsTotal) {
-        //get components without diagram
+        let limit = 1000;
+
+        if(componentsToUpdate.length >= limit) {
+            await categoryController.updateCategories(componentsToUpdate);
+            componentsToUpdate = [];
+        }
+    };
+
+    log.i('Start processing data');
+    log.start('Обработано моделей %s, Обработано компонентов %s, Обработано диаграмм %s.');
+
+    await parseDiagrams();
+
+    async function queryParsingCallback(params, callback) {
+        try {
+            if(params.step == 'models') {
+                await processModels(params);
+                return callback();
+            }
+            else if(params.step == 'components') {
+                await processComponents(params)
+                return callback();
+            }
+            else if(params.step == 'diagram') {
+
+                await processDiagram(params);
+                return callback();
+            }
+
+        } catch(e) {
+            log.e(e.message);
+            return callback(true);
+        }
     }
-*/
 
-    db.sequelize.close();
+    async function processYears(params) {
+        //get categories of current manufacturer
+        let categories = await categoryController.getChildrenList(params.make.id);
+
+        await Promise.map(categories, async (category) => {
+
+            //get years of current category
+            let years = await categoryController.getChildrenList(category.id);
+
+            await Promise.map(years, async(year) => {
+
+                debug('add ' + getPartshouseUrl([params.make.name, category.name, year.name]) + ' to query');
+
+                q.push({
+                    step: 'models',
+                    url: getPartshouseUrl([params.make.name, category.name, year.name]),
+                    cookies: params.cookies,
+                    make: params.make,
+                    cat: category,
+                    year: year
+                });
+            });
+        });
+    }
+
+    async function processModels(params) {
+        let partshouseModels = await getPartshouseModels(params.url, params.cookies);
+        let partzillaModels = await categoryController.getChildrenList(params.year.id);
+
+        //let models = [];
+        await Promise.map(partzillaModels, async(partzillaModel) => {
+
+            let partshouseModel = partshouseModels.find((partshouseModel) => {
+                return partshouseModel.name == partzillaModel.name;
+            });
+
+            if (typeof partshouseModel !== 'undefined') {
+
+                debug('add ' + getPartshouseUrl([params.make.name]) + partshouseModel.url + ' to query');
+                log.step(1);
+                q.push({
+                    step: 'components',
+                    url: getPartshouseUrl([params.make.name]) + partshouseModel.url,
+                    cookies: params.cookies,
+                    make: params.make,
+                    year: params.year,
+                    model: partzillaModel
+                });
+            }
+        });
+    }
+
+
+    async function processComponents(params) {
+
+        let partshouseComponents = await getPartshouseComponents(params.url, params.cookies);
+        let partzillaComponents = await categoryController.getChildrenList(params.model.id);
+
+        await Promise.map(partzillaComponents, async(partzillaComponent) => {
+
+            let partshouseComponent = partshouseComponents.find((partshouseComponent) => {
+                return partshouseComponent.name.toLowerCase() == partzillaComponent.name.toLowerCase();
+            });
+
+            if (typeof partshouseComponent !== 'undefined') {
+
+                debug('add ' + getPartshouseUrl([params.make.name]) + partshouseComponent.url + ' to query');
+                log.step(0, 1);
+                q.push({
+                    step: 'diagram',
+                    url: getPartshouseUrl([params.make.name]) + partshouseComponent.url,
+                    cookies: params.cookies,
+                    make: params.make,
+                    year: params.year,
+                    model: params.model,
+                    component: partzillaComponent
+                });
+            }
+        });
+    }
+
+
+    async function processDiagram(params) {
+
+        let component = params.component.dataValues;
+        debug('parse diagram for '+ params.make.name + ' ' + params.model.name + ' ' + params.component.name);
+        component.diagram_url = await parseDiagramUrl(params.url, params.cookies);
+        componentsToUpdate.push(component);
+        log.step(0, 0, 1);
+
+        //await categoryController.upsertCategories([component], params.model.id);
+    }
+
+    async function updateDiagrams() {
+
+        //get count of filtered components
+        let componentsHandled = 0;
+        const componentsTotal = componentsToUpdate.length;
+
+        const progress = createProgressBar('updating diagrams', componentsTotal);
+
+        while(componentsHandled < componentsTotal) {
+
+            let diff = componentsTotal - componentsHandled;
+            let limit = (diff < 1000) ? diff : 1000;
+            let start = componentsHandled;
+            let end = start + limit;
+
+            const components = componentsToUpdate.slice(start, end);
+            await categoryController.update(components);
+            progress.tick(components.length);
+        }
+    }
+
+    async function parseDiagrams() {
+
+        //get list of Manufacturers
+        let manufacturers = await categoryController.getMakeList();
+
+        await Promise.map(manufacturers, async (manufacturer) => {
+
+            try {
+                //get cookies for {manufacturer}partshouse.com site or throw Error if not found
+                const cookies = await authController.getCookiesPartshouse(manufacturer.name);
+
+                //process manufacturer's year section
+                await processYears({
+                    cookies: cookies,
+                    make: manufacturer
+                });
+            }
+            catch (e) {
+                log.w(e);
+            }
+        });
+    }
+
+
+    function getPartshouseUrl(path = []) {
+
+        if(path.length == 0)
+            return;
+
+        //prepare url path section chain from names
+        let preparedPath = path.map((pathSection) => {
+            return pathSection
+                .replace('-', '')
+                .replace(/\s+/g, '')
+                .toLowerCase();
+        });
+
+        if(path.length == 1)
+            return 'https://www.'+preparedPath[0]+'partshouse.com';
+        else
+            return 'https://www.'+preparedPath[0]+'partshouse.com/oemparts/c/'+preparedPath.join('_')+'/parts';
+    }
+
+
+    async function getPartshouseModels(url, cookies) {
+
+        return new Promise((resolve, reject) => {
+
+            needle.get(url, {cookies: cookies}, async (err, res) => {
+                if(err) return reject(err);
+
+                return resolve(await parseModels(res.body));
+            });
+        });
+    }
+
+    async function getPartshouseComponents(url, cookies) {
+
+        return new Promise((resolve, reject) => {
+
+            needle.get(url, {cookies: cookies}, async (err, res) => {
+                if(err) return reject(err);
+
+                return resolve(await parseComponents(res.body));
+            });
+        });
+    }
+
+    async function parseComponents(html_page) {
+        const $ = await cheerio.load(html_page);
+
+        const components = [];
+
+        $('#partassemthumblist .passemname a').each((i, el) => {
+            components.push({
+                name: $(el).text(),
+                url: $(el).attr('href')
+            });
+        });
+
+        return components;
+    }
+
+    async function parseModels(html_page) {
+
+        const $ = await cheerio.load(html_page);
+
+        const models = [];
+
+        $('ul.partsubselect li a').each((i, el) => {
+
+            models.push({
+                name: $(el).text(),
+                url: $(el).attr('href')
+            });
+        });
+
+        return models;
+    }
+
+    async function parseDiagramUrl(url, cookies) {
+
+        return new Promise((resolve, reject) => {
+
+            needle.get( url, { cookies: cookies }, (err, res) => {
+
+                if(err)
+                    return reject(err);
+
+                let diagramUrl = res.body.match(/assempath\s=\s*'(\S*)'/)[1];
+
+                return resolve(diagramUrl);
+            });
+        });
+    }
 }
 
-parseDiagrams();
+
+module.exports = {
+    parse
+};

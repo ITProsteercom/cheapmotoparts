@@ -27,18 +27,23 @@ async function authPartzilla(credentials) {
     });
 }
 
-async function getCookiesPartshouse(manufacturer) {
+async function getCookiesPartshouse(manufacturerName) {
 
-    let url = 'https://www.'+manufacturer.toLowerCase()+'partshouse.com';
+    let preparedName = manufacturerName
+                        .replace('-', '')
+                        .replace(/\s+/g, '')
+                        .toLowerCase();
+
+    let url = 'https://www.' + preparedName + 'partshouse.com';
 
     return new Promise((resolve, reject) => {
 
-        // get cookies from partzilla
-        needle.get(url, function(err, response){
-            if (err || response.statusCode != 200)
-                reject(err || response.statusCode);
+        // get cookies from {name}partshouse.com
+        needle.get(url, function(err, response) {
+            if (err)
+                return reject(err);
 
-            resolve(response.cookies);
+            return resolve(response.cookies);
         });
     });
 }

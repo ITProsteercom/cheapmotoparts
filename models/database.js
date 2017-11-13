@@ -3,7 +3,7 @@
 var fs        = require('fs');
 var path      = require('path');
 var Sequelize = require('sequelize');
-require('sequelize-hierarchy')(Sequelize);
+//require('sequelize-hierarchy')(Sequelize);
 var basename  = path.basename(__filename);
 //var env       = process.env.NODE_ENV || 'dev';
 var config    = require(__dirname + '/../config/config.json')["parser"];

@@ -35,6 +35,15 @@ async function upsertCategories(categories, parent_id) {
 }
 
 
+async function updateCategories(categories) {
+
+    if(categories.length <= 0)
+        return [];
+
+    return await Category.upsertBulk(categories);
+}
+
+
 function filterCategories(categoryList) {
 
     if(categoryList.length == 0)
@@ -63,12 +72,18 @@ async function parseCategoties(html_page, parent_id) {
 
     $('.catalog-table').find('table').last().find('a').each(function(i) {
 
+        let name = $(this).text();
         let url = $(this).attr('href');
+        let depth_level = getDepthLevel(url);
+
+        //if it is Model category slice name to ' - '
+        if(depth_level == 4)
+            name = name.replace(/\s-\s.*/, '');
 
         categories[i] = {
             parent_id: parent_id,
-            name: $(this).text(),
-            //depth_level: getDepthLevel(url),
+            name: name,
+            depth_level: getDepthLevel(url),
             url: url
         };
     });
@@ -81,29 +96,22 @@ function getDepthLevel(url) {
     return url.slice(1).split('/').length - 1;
 }
 
-async function getComponentsCount() {
 
-    return await Category.count({
-            where: {
-                depth_level: 5
-            }
-        });
+async function getMakeList() {
+
+    return await Category.getMakeList();
 }
 
-async function getComponents(limit = 0) {
+async function getChildrenList(parent_id) {
 
     return await Category.findAll({
-        where: { id: 3 },
-        include: [{
-            model: Category,
-            as: 'ancestors'
-        }],
-        order: [ [ { model: Category, as: 'ancestors' }, 'depth_level' ] ]
+        where: { parent_id: parent_id }
     });
 }
 
 module.exports = {
     loadCategories,
-    getComponentsCount,
-    getComponents
+    updateCategories,
+    getMakeList,
+    getChildrenList
 };

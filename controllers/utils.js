@@ -1,5 +1,5 @@
 var default_config = require(__dirname + '/../config/config.json')["default"];
-const ProgressBar = require('process');
+const ProgressBar = require('progress');
 
 function setAppConfig(arConfig, argv) {
     let appConfig = {};
@@ -23,7 +23,7 @@ function setConfig(consoleList, defaultList) {
 }
 
 function formatTitleCase(str) {
-    console.log(str);
+
     return str
         .toString()
         .toLowerCase()

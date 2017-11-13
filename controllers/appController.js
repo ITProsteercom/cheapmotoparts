@@ -67,7 +67,7 @@ async function load(url = '/catalog') {
                 q.resume();
                 log.i('Resumed');
             }, 300000); // 5 minutes
-        }
+        };
 
         //add initial url to query
         q.push({

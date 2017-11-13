@@ -10,12 +10,12 @@ module.exports = {
       },
       parent_id: {
         type: Sequelize.INTEGER,
-        // allowNull: true,
-        // defaultValue: null,
-        // references: {
-        //   model: 'categories',
-        //   key: 'id'
-        // }
+        allowNull: true,
+        defaultValue: null,
+        references: {
+          model: 'categories',
+          key: 'id'
+        }
       },
       name: {
         type: Sequelize.STRING
@@ -27,6 +27,11 @@ module.exports = {
       url: {
         type: Sequelize.STRING,
         unique: true
+      },
+      diagram_url: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        defaultValue: null
       },
       opencart_id: {
         type: Sequelize.INTEGER,
