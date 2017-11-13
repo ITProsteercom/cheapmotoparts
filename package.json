@@ -22,6 +22,7 @@
     "cheerio": "^1.0.0-rc.2",
     "cllc": "0.0.10",
     "config.json": "0.0.4",
+    "cool-trim": "^1.1.1",
     "debug": "^3.1.0",
     "dotenv": "^4.0.0",
     "mysql2": "^1.4.2",
@@ -29,7 +30,6 @@
     "progress": "^2.0.0",
     "request": "^2.83.0",
     "sequelize": "^4.22.6",
-    "sequelize-hierarchy": "github:deksden/sequelize-hierarchy",
     "tress": "^1.0.5",
     "yargs": "^10.0.3"
   }

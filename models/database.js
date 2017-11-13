@@ -3,39 +3,42 @@
 var fs        = require('fs');
 var path      = require('path');
 var Sequelize = require('sequelize');
-//require('sequelize-hierarchy')(Sequelize);
 var basename  = path.basename(__filename);
-//var env       = process.env.NODE_ENV || 'dev';
-var config    = require(__dirname + '/../config/config.json')["parser"];
-var db        = {};
 
-config.operatorsAliases = false;
-config.logging = false;
+var db = {};
+var config = {};
 
-if (config.use_env_variable) {
-  var sequelize = new Sequelize(process.env[config.use_env_variable]);
-} else {
-  var sequelize = new Sequelize(config.database, config.username, config.password, config);
-}
+config.parser = require(__dirname + '/../config/config.json')['parser'];
+config.opencart = require(__dirname + '/../config/config.json')['opencart'];
 
-fs
-  .readdirSync(__dirname)
-  .filter(file => {
-    return (file.indexOf('.') !== 0) && (file !== basename) && (file.slice(-3) === '.js');
-  })
-  .forEach(file => {
-      var model = sequelize['import'](path.join(__dirname, file));
-      db[model.name] = model;
-  });
+Object.keys(config).forEach(configName => {
 
+    let conf = config[configName];
 
-Object.keys(db).forEach(modelName => {
-  if (db[modelName].associate) {
-    db[modelName].associate(db);
-  }
+    conf.operatorsAliases = false;
+    conf.logging = false;
+
+    var sequelize = new Sequelize(conf.database, conf.username, conf.password, conf);
+    db[configName] = {};
+
+    fs
+        .readdirSync(__dirname+'/'+configName)
+        .filter(file => {
+            return (file.indexOf('.') !== 0) && (file !== basename) && (file.slice(-3) === '.js');
+        })
+        .forEach(file => {
+            var model = sequelize['import'](path.join(__dirname, configName, file));
+            db[configName][model.name] = model;
+        });
+
+    Object.keys(db[configName]).forEach(modelName => {
+        if (db[configName][modelName].associate) {
+            db[configName][modelName].associate(db);
+        }
+    });
+
+    db[configName].sequelize = sequelize;
+    db[configName].Sequelize = Sequelize;
 });
-
-db.sequelize = sequelize;
-db.Sequelize = Sequelize;
 
 module.exports = db;

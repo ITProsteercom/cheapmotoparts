@@ -6,18 +6,17 @@ const needle = require('needle');
 const tress = require('tress');
 var Promise = require("bluebird");
 
-const db = require('../models/database');
+const db = require('../models/database').parser;
 
 const authController = require('./authController');
 const categoryController = require('./categoryController');
-const { createProgressBar } = require('./utils');
 
 parse();
 
 async function parse() {
 
-    var q = tress(queryParsingCallback, 5);// 5 parallel streams
     var componentsToUpdate = [];
+    var q = tress(queryParsingCallback, 5);// 5 parallel streams
 
     q.retry = function () {
         q.pause();
@@ -165,26 +164,6 @@ async function parse() {
         //await categoryController.upsertCategories([component], params.model.id);
     }
 
-    async function updateDiagrams() {
-
-        //get count of filtered components
-        let componentsHandled = 0;
-        const componentsTotal = componentsToUpdate.length;
-
-        const progress = createProgressBar('updating diagrams', componentsTotal);
-
-        while(componentsHandled < componentsTotal) {
-
-            let diff = componentsTotal - componentsHandled;
-            let limit = (diff < 1000) ? diff : 1000;
-            let start = componentsHandled;
-            let end = start + limit;
-
-            const components = componentsToUpdate.slice(start, end);
-            await categoryController.update(components);
-            progress.tick(components.length);
-        }
-    }
 
     async function parseDiagrams() {
 

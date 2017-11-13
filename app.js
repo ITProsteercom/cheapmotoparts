@@ -1,5 +1,5 @@
 const ENV = require('dotenv').load().parsed;
-const db = require('./models/database');
+const db = require('./models/database').parser;
 const utils = require('./controllers/utils');
 const debug = require('debug')('app');
 const log = require('cllc')();

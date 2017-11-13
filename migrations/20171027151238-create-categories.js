@@ -38,6 +38,10 @@ module.exports = {
         allowNull: true,
         defaultValue: null
       },
+      sync : {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false
+      },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
