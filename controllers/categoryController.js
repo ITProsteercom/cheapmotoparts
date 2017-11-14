@@ -1,7 +1,7 @@
 const cheerio = require('cheerio');
 const debug = require('debug')('controller:category');
 
-const Category = require('../models/database').Category;
+const Category = require('../models/database').parser.Category;
 
 //depth level - category name
 const categoryChain = {
@@ -22,11 +22,11 @@ async function loadCategories(html, parent_id) {
     let filteredCategories = filterCategories(categoriesPartzilla);
 
     //save categories to db
-    return await upsertCategories(filteredCategories, parent_id);
+    return await upsertAndReturnCategories(filteredCategories, parent_id);
 }
 
 
-async function upsertCategories(categories, parent_id) {
+async function upsertAndReturnCategories(categories, parent_id) {
 
     if(categories.length <= 0)
         return [];
@@ -97,21 +97,24 @@ function getDepthLevel(url) {
 }
 
 
-async function getMakeList() {
+async function getMakeList(filter = {}) {
 
-    return await Category.getMakeList();
+    return await Category.getMakeList(filter);
 }
 
-async function getChildrenList(parent_id) {
+async function getChildrenList(parent_id, filter = {}) {
+
+    filter.parent_id = parent_id;
 
     return await Category.findAll({
-        where: { parent_id: parent_id }
+        where: filter
     });
 }
 
 module.exports = {
     loadCategories,
     updateCategories,
+    upsertAndReturnCategories,
     getMakeList,
     getChildrenList
 };

@@ -46,23 +46,23 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Category.upsertBulk = async function (arCategories) {
-    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'diagram_url']});
+    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'diagram_url', 'sync']});
   };
 
   Category.upsertBulkAndReturn = async function (arCategories, parent_id) {
 
-    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'diagram_url']});
+    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'diagram_url', 'sync']});
 
     return Category.findAll({
         where: {parent_id: parent_id}
       });
   };
 
-  Category.getMakeList = async function () {
+  Category.getMakeList = async function (filter = {}) {
 
-    return await Category.findAll({
-      where: { depth_level: 1 }
-    });
+    filter.depth_level = 1;
+
+    return await Category.findAll({ where: filter });
   };
 
   return Category;

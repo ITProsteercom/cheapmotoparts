@@ -1,6 +1,6 @@
 const debug = require('debug')('controller:productToCategory');
 
-const ProductToCategory = require('../models/database').ProductToCategory;
+const ProductToCategory = require('../models/database').parser.ProductToCategory;
 
 
 async function saveProductsToCategory(products, category_id) {

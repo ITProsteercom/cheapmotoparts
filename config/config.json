@@ -7,9 +7,9 @@
     "dialect": "mysql"
   },
   "opencart": {
-    "username": "remote",
-    "password": "6d47Fp",
-    "database": "cheammn_oc2",
+    "username": "root",
+    "password": "",
+    "database": "cheapmotoparts",
     "host": "localhost",
     "dialect": "mysql"
   },

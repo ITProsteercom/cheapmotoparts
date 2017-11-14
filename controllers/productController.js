@@ -1,7 +1,7 @@
 const cheerio = require('cheerio');
 const debug = require('debug')('controller:product');
 
-const Product = require('../models/database').Product;
+const Product = require('../models/database').parser.Product;
 
 async function loadProducts(html) {
 

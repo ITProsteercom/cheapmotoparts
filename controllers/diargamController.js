@@ -160,8 +160,6 @@ async function parse() {
         component.diagram_url = await parseDiagramUrl(params.url, params.cookies);
         componentsToUpdate.push(component);
         log.step(0, 0, 1);
-
-        //await categoryController.upsertCategories([component], params.model.id);
     }
 
 
