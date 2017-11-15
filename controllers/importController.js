@@ -1,6 +1,7 @@
 const CONFIG = require('dotenv').load().parsed;
 const log = require('cllc')();
 const debug = require('debug')('controller:import');
+const path = require('path');
 const Promise = require('bluebird');
 const childProcess = require('child_process');
 
@@ -11,7 +12,8 @@ const ocDatabase = database.opencart;
 const categoryController = require('./categoryController');
 const { createProgressBar, fileExists, getRandomInRange } = require('./utils');
 
-const ocImagesPath = '/var/www/html/image/';
+//const ocImagesPath = '/var/www/html/image/';
+const ocImagesPath = 'D:/OpenServer/domains/cheapmotoparts.dev/image/';
 const LIMIT = +(CONFIG.MAX_OPEN_DB_CONNECTIONS || 100);
 const MAX_NETWORK_REQUESTS = +CONFIG.MAX_NETWORK_REQUESTS || 20;
 
@@ -117,7 +119,7 @@ async function loadDiagram(diagram_url) {
     if (!!diagram_url) {
 
         let imageName = getImageName(diagram_url);
-        let imageSavePath = ocImagesPath + imageName;
+        let imageSavePath = path.join(ocImagesPath + imageName);
 
         if (await fileExists(imageSavePath)) {
             log.i(`Diagram ${imageName} already exists!`);
@@ -136,7 +138,7 @@ async function loadDiagram(diagram_url) {
 }
 
 async function downloadZoomableImage(imageUrl, filename) {
-    let port = 150 + getRandomInRange(10, 99);
+    let port = '150' + getRandomInRange(10, 99);
     const command = `node ./dezoomify/node-app/dezoomify-node.js ${imageUrl} ${filename} ${port}`;
 
     await Promise.promisify(childProcess.exec)(command);
@@ -151,8 +153,14 @@ function getImageName(diagram_url) {
 
     imageXMLPath.splice(0, 1);
     imageXMLPath.splice(-1, 1);
+    
+    let filename = '';
+    if(imageXMLPath.length)
+        filename = imageXMLPath.join('-') + '.jpg';
+    else
+        filename = 'noimg.img';
 
-    return 'catalog/diagrams/' + imageXMLPath.join('-') + '.jpg';
+    return path.join('catalog/diagrams/', filename);
 }
 
 async function updateOpencartCategories (psCategories) {
