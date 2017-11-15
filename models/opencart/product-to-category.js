@@ -21,25 +21,19 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: true,
         }
     }, {
-        tableName: 'product_to_category',
-        classMethods: {
-            /**
-             *
-             * @param {Product} product
-             * @param {Number[]} categories
-             */
-            assignCategories(product, categories) {
-                const input = categories.map(catId => ({
-                    product_id: product.product_id,
-                    category_id: catId,
-                }));
-
-                return Promise.map(input, (el) => {
-                    return ProductToCategory.upsert(el);
-                });
-            }
-        }
+        tableName: 'product_to_category'
     });
+
+    ProductToCategory.assignCategories = function(product, categories) {
+        const input = categories.map(catId => ({
+            product_id: product.product_id,
+            category_id: catId,
+        }));
+
+        return Promise.map(input, (el) => {
+            return ProductToCategory.upsert(el);
+        });
+    }
 
     return ProductToCategory;
 };

@@ -99,7 +99,9 @@ function getDepthLevel(url) {
 
 async function getMakeList(filter = {}) {
 
-    return await Category.getMakeList(filter);
+    filter.depth_level = 1;
+
+    return await Category.findAll({ where: filter });
 }
 
 async function getChildrenList(parent_id, filter = {}) {
@@ -111,10 +113,19 @@ async function getChildrenList(parent_id, filter = {}) {
     });
 }
 
+
+async function count(filter = {}) {
+
+    return await Category.count({
+        where: filter
+    });
+}
+
 module.exports = {
     loadCategories,
     updateCategories,
     upsertAndReturnCategories,
     getMakeList,
-    getChildrenList
+    getChildrenList,
+    count
 };

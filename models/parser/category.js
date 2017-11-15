@@ -45,24 +45,19 @@ module.exports = (sequelize, DataTypes) => {
     createdAt: false
   });
 
+  Category.belongsTo(Category, {as:'Parent', foreignKey: 'parent_id'});
+
   Category.upsertBulk = async function (arCategories) {
-    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'diagram_url', 'sync']});
+    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'diagram_url', 'opencart_id', 'sync']});
   };
 
   Category.upsertBulkAndReturn = async function (arCategories, parent_id) {
 
-    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'diagram_url', 'sync']});
+    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'diagram_url', 'opencart_id', 'sync']});
 
     return Category.findAll({
         where: {parent_id: parent_id}
       });
-  };
-
-  Category.getMakeList = async function (filter = {}) {
-
-    filter.depth_level = 1;
-
-    return await Category.findAll({ where: filter });
   };
 
   return Category;

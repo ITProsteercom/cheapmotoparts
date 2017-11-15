@@ -15,27 +15,26 @@ module.exports = function (sequelize, DataTypes) {
     		allowNull: false,
 		}
     }, {
-        tableName: 'category_path',
-		classMethods: {
-            async createTree(category) {
-                const parents = await CategoryPath.findAll({ where: { category_id: category.parent_id }});
-
-                let input = parents.map((parent) => ({
-                    category_id: category.category_id,
-                    path_id: parent.path_id,
-                    level: parent.level,
-                }));
-
-                input.push({
-                    category_id: category.category_id,
-                    path_id: category.category_id,
-                    level: parents.length,
-                });
-
-                return CategoryPath.bulkCreate(input);
-            }
-        }
+        tableName: 'category_path'
     });
+
+    CategoryPath.createTree = async function(category) {
+        const parents = await CategoryPath.findAll({ where: { category_id: category.parent_id }});
+
+        let input = parents.map((parent) => ({
+            category_id: category.category_id,
+            path_id: parent.path_id,
+            level: parent.level,
+        }));
+
+        input.push({
+            category_id: category.category_id,
+            path_id: category.category_id,
+            level: parents.length,
+        });
+
+        return CategoryPath.bulkCreate(input);
+    }
 
     return CategoryPath;
 }

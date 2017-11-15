@@ -4,14 +4,20 @@
     "password": "",
     "database": "parser",
     "host": "localhost",
-    "dialect": "mysql"
+    "dialect": "mysql",
+    "timezone": "+00:00"
   },
   "opencart": {
     "username": "root",
     "password": "",
     "database": "cheapmotoparts",
     "host": "localhost",
-    "dialect": "mysql"
+    "dialect": "mysql",
+    "timezone": "+00:00",
+    "define": {
+      "underscored": true,
+      "timestamps": false
+    }
   },
   "partzilla": {
     "url": "https://partzilla.com",
