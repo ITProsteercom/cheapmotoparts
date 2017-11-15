@@ -1,6 +1,4 @@
 const Sequelize = require('sequelize');
-const trim = require('cool-trim');
-const lodash = require('lodash');
 
 module.exports = function (sequelize) {
     const Currency = sequelize.define('Currency', {
