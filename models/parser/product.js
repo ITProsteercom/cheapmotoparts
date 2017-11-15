@@ -40,6 +40,8 @@ module.exports = (sequelize, DataTypes) => {
     createdAt: false
   });
 
+  Product.belongsToMany(sequelize.models.Category, { through: sequelize.models.ProductToCategory });
+
   Product.upsertBulkAndReturn = async function (arProducts) {
 
     await Product.bulkCreate(arProducts, {updateOnDuplicate: ['name', 'sku', 'url', 'price']});

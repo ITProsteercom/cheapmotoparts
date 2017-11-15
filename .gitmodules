@@ -1,0 +1,3 @@
+[submodule "dezoomify"]
+	path = dezoomify
+	url = https://github.com/lovasoa/dezoomify.git

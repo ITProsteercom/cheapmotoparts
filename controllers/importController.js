@@ -2,9 +2,7 @@ const CONFIG = require('dotenv').load().parsed;
 const log = require('cllc')();
 const debug = require('debug')('controller:import');
 const Promise = require('bluebird');
-const createWriteStream = require('fs').createWriteStream;
 const childProcess = require('child_process');
-
 
 const database = require('../models/database');
 const psDatabase = database.parser;
@@ -13,7 +11,7 @@ const ocDatabase = database.opencart;
 const categoryController = require('./categoryController');
 const { createProgressBar, fileExists, getRandomInRange } = require('./utils');
 
-const ocImagesPath = '/var/www/html/image/catalog/diagrams/';
+const ocImagesPath = '/var/www/html/image/';
 const LIMIT = +(CONFIG.MAX_OPEN_DB_CONNECTIONS || 100);
 const MAX_NETWORK_REQUESTS = +CONFIG.MAX_NETWORK_REQUESTS || 20;
 
@@ -34,51 +32,8 @@ async function sync() {
     global.progress = createProgressBar('synchronizing categories', categoryTotal);
 
     await syncCategory();
-}
 
-
-async function loadDiagram(diagram_url) {
-    const diagramErrors = createWriteStream(`./diagram-errors.log`);
-    let image = null;
-
-    if (!!diagram_url) {
-
-        let imageName = getImageName(diagram_url);
-        let imageSavePath = ocImagesPath + imageName;
-
-        if (await fileExists(imageSavePath)) {
-            log.i(`Diagram ${imageName} already exists!`);
-        } else {
-            try {
-                console.log(`Loading diagram: ${imageName}`);
-                await downloadZoomableImage(diagram_url, imageSavePath);
-            } catch (e) {
-                let message = `ID: ${psSection.id}\nName: ${psSection.section}\nURL: ${psSection.diagram_url}\nError Message: ${e.message}\n\n`;
-                console.log(`Error loading -  ${message}\n${e.message}`);
-                diagramErrors.write(message);
-            }
-        }
-    }
-}
-
-async function downloadZoomableImage(imageUrl, filename) {
-    let port = 150 + getRandomInRange(10, 99);
-    const command = `node ./dezoomify/node-app/dezoomify-node.js ${imageUrl} ${filename} ${port}`;
-
-    await Promise.promisify(childProcess.exec)(command);
-}
-
-function getImageName(diagram_url) {
-
-    let imageXMLPath = diagram_url
-            .replace('https://','')
-            .replace('http://','')
-            .split('/');
-
-    imageXMLPath.splice(0, 1);
-    imageXMLPath.splice(-1, 1);
-
-    return imageXMLPath.join('-') + '.jpg';
+    await syncProducts();
 }
 
 async function syncCategory(depth_level = 1) {
@@ -117,6 +72,88 @@ async function syncCategory(depth_level = 1) {
     });
 }
 
+async function syncProducts() {
+
+    return new Promise(async (resolve, reject) => {
+
+        const productsTotal = await psDatabase.Product.count();
+
+        if (!productsTotal) {
+            console.log('all products have been synchronized');
+            resolve(true);
+        }
+
+        const progress = createProgressBar('synchronizing products', productsTotal);
+        let productsHandled = 0;
+        while (productsHandled < productsTotal) {
+            let products = await psDatabase.Product.findAll({
+                include: [psDatabase.Category],
+                limit: LIMIT,
+            });
+
+            await Promise.map(products, async(psProduct) => {
+                const ocProduct = await ocDatabase.Product.upsertFromParser({
+                    name: psProduct.name,
+                    sku: psProduct.sku,
+                    price: psProduct.price * 1.15,
+                    alias: psProduct.sku,
+                    manufacturer_id: psProduct.Category && psProduct.Category[0] ? psProduct.Category[0].manufacturer_id : 0
+                });
+
+                const categories = psProduct.Category.map(cat => cat.opencart_id);
+                await ocDatabase.ProductToCategory.assignCategories(ocProduct, categories);
+                await psProduct.update({opencart_id: ocProduct.product_id, sync: true});
+
+                productsHandled += 1;
+                progress.tick();
+            });
+        }
+    });
+}
+
+async function loadDiagram(diagram_url) {
+    let imageName = null;
+
+    if (!!diagram_url) {
+
+        let imageName = getImageName(diagram_url);
+        let imageSavePath = ocImagesPath + imageName;
+
+        if (await fileExists(imageSavePath)) {
+            log.i(`Diagram ${imageName} already exists!`);
+        } else {
+            try {
+                console.log(`Loading diagram: ${imageName}`);
+                await downloadZoomableImage(diagram_url, imageSavePath);
+            } catch (e) {
+                let message = `ID: ${psSection.id}\nName: ${psSection.section}\nURL: ${psSection.diagram_url}\nError Message: ${e.message}\n\n`;
+                console.log(`Error loading -  ${message}\n${e.message}`);
+            }
+        }
+
+        return imageName;
+    }
+}
+
+async function downloadZoomableImage(imageUrl, filename) {
+    let port = 150 + getRandomInRange(10, 99);
+    const command = `node ./dezoomify/node-app/dezoomify-node.js ${imageUrl} ${filename} ${port}`;
+
+    await Promise.promisify(childProcess.exec)(command);
+}
+
+function getImageName(diagram_url) {
+
+    let imageXMLPath = diagram_url
+            .replace('https://','')
+            .replace('http://','')
+            .split('/');
+
+    imageXMLPath.splice(0, 1);
+    imageXMLPath.splice(-1, 1);
+
+    return 'catalog/diagrams/' + imageXMLPath.join('-') + '.jpg';
+}
 
 async function updateOpencartCategories (psCategories) {
 
@@ -156,6 +193,10 @@ function getCategoryOptions(psCategory) {
     }
     else {
         options.urlAlias = psCategory.name;
+    }
+
+    if(!!psCategory.diagram_url) {
+        options.image = loadDiagram(psCategory.diagram_url);
     }
 
     return options;
