@@ -14,7 +14,7 @@ const { createProgressBar, fileExists, getRandomInRange } = require('./utils');
 
 const ocImagesPath = ENV.OC_IMAGES_PATH || '/var/www/html/image/';
 const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
-const MAX_NETWORK_REQUESTS = +ENV.MAX_NETWORK_REQUESTS || 20;
+const MAX_DIAGRAM_REQUESTS = +ENV.MAX_DIAGRAM_REQUESTS || 20;
 
 sync()
     .then(() => {
@@ -28,9 +28,7 @@ sync()
 
 async function sync() {
 
-    let categoryTotal = await categoryController.count();
-
-    global.progress = createProgressBar('synchronizing categories', categoryTotal);
+    log.i('Start synchronization.....');
 
     await syncCategory();
 
@@ -41,7 +39,17 @@ async function sync() {
     await syncProducts();
 }
 
-async function syncCategory(depth_level = 1) {
+async function syncCategory() {
+
+    let categoryTotal = await categoryController.count();
+    global.progress = createProgressBar('synchronizing categories', categoryTotal);
+
+    await syncCategoryLevel();
+    log.i('...categories synchronization was completed successfully');
+}
+
+
+async function syncCategoryLevel(depth_level = 1) {
 
     return new Promise(async (resolve, reject) => {
 
@@ -74,7 +82,7 @@ async function syncCategory(depth_level = 1) {
                 psCategoryHandled += psCategories.length;
             }
 
-            await syncCategory(++depth_level);
+            await syncCategoryLevel(++depth_level);
             resolve(true);
         }
         catch(err) {
@@ -104,7 +112,7 @@ async function syncDiagrams() {
             let componentsHandled = 0;
             const progress = createProgressBar('synchronizing diagrams', componentsTotal);
 
-            do {
+            while(componentsHandled < componentsTotal) {
                 //get from parser DB component list with diagrams and sync with opencart DB
                 let psCategories = await psDatabase.Category.findAll({
                     where: {
@@ -115,11 +123,6 @@ async function syncDiagrams() {
                     limit: MAX_OPEN_DB_CONNECTIONS,
                     offset: componentsHandled
                 });
-
-                if (!psCategories.length) {
-                    log.i('all diagrams have been synchronized');
-                    resolve(true);
-                }
 
                 await Promise.map(psCategories, async (psCategory) => {
 
@@ -132,10 +135,12 @@ async function syncDiagrams() {
                     componentsHandled += 1;
                     progress.tick();
                 }, {
-                    concurrency: MAX_NETWORK_REQUESTS
+                    concurrency: 1
                 });
+            }
 
-            } while(componentsHandled <= componentsTotal);
+            log.i('...diagrams synchronization was completed successfully');
+            resolve(true);
         }
         catch(err) {
             reject(err);
@@ -160,7 +165,7 @@ async function syncManufacturers() {
                 await ocDatabase.Manufacturer.create({name: psManufacturer.name});
             }
         });
-        log.i('all manufacturers have been synchronized');
+        log.i('...manufacturers synchronization was completed successfully');
         resolve(true);
     });
 }
@@ -215,18 +220,19 @@ async function loadDiagram(Category) {
 
         if (!!Category.diagram_url) {
 
-            let imageName = getImageName(Category.diagram_url);
+            imageName = getImageName(Category.diagram_url);
             let imageSavePath = path.join(ocImagesPath + imageName);
 
             if (await fileExists(imageSavePath)) {
-                log.i(`Diagram ${imageName} already exists!`);
+                debug(`Diagram ${imageName} already exists!`);
             } else {
                 try {
                     debug(`Loading diagram: ${imageName}`);
                     await downloadZoomableImage(Category.diagram_url, imageSavePath);
+                    resolve(imageName);
                 } catch (e) {
                     let message = `ID: ${Category.id}\nName: ${Category.name}\nURL: ${Category.diagram_url}\nError Message: ${e.message}\n\n`;
-                    reject(`Error loading -  ${message}\n${e.message}`);
+                    log.w(`Error loading -  ${message}\n${e.message}`);
                 }
             }
         }
