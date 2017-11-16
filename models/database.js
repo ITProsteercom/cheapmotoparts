@@ -5,6 +5,12 @@ var path      = require('path');
 var Sequelize = require('sequelize');
 var basename  = path.basename(__filename);
 
+const Op = Sequelize.Op;
+const operatorsAliases = {
+    $eq: Op.eq,
+    $ne: Op.ne
+};
+
 var db = {};
 var config = {};
 
@@ -15,7 +21,7 @@ Object.keys(config).forEach(configName => {
 
     let conf = config[configName];
 
-    conf.operatorsAliases = false;
+    conf.operatorsAliases = operatorsAliases;
     conf.logging = false;
 
     var sequelize = new Sequelize(conf.database, conf.username, conf.password, conf);

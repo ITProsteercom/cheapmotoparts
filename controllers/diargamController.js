@@ -289,6 +289,9 @@ async function parse() {
 
                 let diagramUrl = res.body.match(/assempath\s=\s*'(\S*)'/)[1];
 
+                if(diagramUrl == 'noimg/assembly.xml')
+                    diagramUrl = null;
+
                 return resolve(diagramUrl);
             });
         });

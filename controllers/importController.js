@@ -1,4 +1,4 @@
-const CONFIG = require('dotenv').load().parsed;
+const ENV = require('dotenv').load().parsed;
 const log = require('cllc')();
 const debug = require('debug')('controller:import');
 const path = require('path');
@@ -14,8 +14,8 @@ const { createProgressBar, fileExists, getRandomInRange } = require('./utils');
 
 //const ocImagesPath = '/var/www/html/image/';
 const ocImagesPath = 'D:/OpenServer/domains/cheapmotoparts.dev/image/';
-const LIMIT = +(CONFIG.MAX_OPEN_DB_CONNECTIONS || 100);
-const MAX_NETWORK_REQUESTS = +CONFIG.MAX_NETWORK_REQUESTS || 20;
+const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
+const MAX_NETWORK_REQUESTS = +ENV.MAX_NETWORK_REQUESTS || 20;
 
 sync()
     .then(() => {
@@ -34,6 +34,8 @@ async function sync() {
     global.progress = createProgressBar('synchronizing categories', categoryTotal);
 
     await syncCategory();
+
+    await syncDiagrams();
 
     await syncProducts();
 }
@@ -56,7 +58,7 @@ async function syncCategory(depth_level = 1) {
             let psCategories = await psDatabase.Category.findAll({
                 where: { depth_level: depth_level },
                 include: [{model: psDatabase.Category, as: 'Parent'}],
-                limit: LIMIT,
+                limit: MAX_OPEN_DB_CONNECTIONS,
                 offset: psCategoryHandled
             });
 
@@ -69,9 +71,66 @@ async function syncCategory(depth_level = 1) {
             progress.tick(psCategories.length);
             psCategoryHandled += psCategories.length;
         }
-
+        resolve(true);
         syncCategory(++depth_level);
     });
+}
+
+async function syncDiagrams() {
+
+    return new Promise(async (resolve, reject) => {
+
+        const componentsTotal = await psDatabase.Category.count({
+            where: {
+                depth_level: 5,
+                diagram_url: {$ne: null},
+                opencart_id: {$ne: null}
+            }
+        });
+
+        console.log('componentsTotal = '+componentsTotal);
+
+        if (!componentsTotal) {
+            console.log('all diagrams have been synchronized');
+            resolve(true);
+        }
+
+        let componentsHandled = 0;
+        const progress = createProgressBar('synchronizing diagrams', componentsTotal);
+
+        do {
+            //get from parser DB component list with diagrams and sync with opencart DB
+            let psCategories = await psDatabase.Category.findAll({
+                where: {
+                    depth_level: 5,
+                    diagram_url: {$ne: null},
+                    opencart_id: {$ne: null}
+                },
+                limit: MAX_OPEN_DB_CONNECTIONS,
+                offset: componentsHandled
+            });
+
+            if (!psCategories.length) {
+                console.log('all diagrams have been synchronized');
+                resolve(true);
+            }
+
+            await Promise.map(psCategories, async (psCategory) => {
+
+                let image = await loadDiagram(psCategory);
+
+                let ocCategory = await ocDatabase.Category.findById(psCategory.opencart_id);
+
+                ocCategory.update({ image });
+
+                componentsHandled += 1;
+                progress.tick();
+            }, {
+                concurrency: MAX_NETWORK_REQUESTS
+            });
+
+        } while(componentsHandled <= componentsTotal)
+    })
 }
 
 async function syncProducts() {
@@ -90,7 +149,7 @@ async function syncProducts() {
         while (productsHandled < productsTotal) {
             let products = await psDatabase.Product.findAll({
                 include: [psDatabase.Category],
-                limit: LIMIT,
+                limit: MAX_OPEN_DB_CONNECTIONS
             });
 
             await Promise.map(products, async(psProduct) => {
@@ -128,10 +187,10 @@ async function loadDiagram(Category) {
                 log.i(`Diagram ${imageName} already exists!`);
             } else {
                 try {
-                    console.log(`Loading diagram: ${imageName}`);
+                    debug(`Loading diagram: ${imageName}`);
                     await downloadZoomableImage(Category.diagram_url, imageSavePath);
                 } catch (e) {
-                    let message = `ID: ${Category.id}\nName: ${Category.section}\nURL: ${Category.diagram_url}\nError Message: ${e.message}\n\n`;
+                    let message = `ID: ${Category.id}\nName: ${Category.name}\nURL: ${Category.diagram_url}\nError Message: ${e.message}\n\n`;
                     reject(`Error loading -  ${message}\n${e.message}`);
                 }
             }
@@ -187,7 +246,7 @@ async function updateOpencartCategories (psCategories) {
 
             categories.push(cat);
         }, {
-            concurrency: LIMIT
+            concurrency: MAX_OPEN_DB_CONNECTIONS
         });
 
         resolve(categories);
@@ -205,10 +264,6 @@ function getCategoryOptions(psCategory) {
     }
     else {
         options.urlAlias = psCategory.name;
-    }
-
-    if(!!psCategory.diagram_url) {
-        options.image = loadDiagram(psCategory);
     }
 
     return options;

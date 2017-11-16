@@ -63,14 +63,8 @@ async function load(url = '/catalog') {
                     let categories = await categoryController.loadCategories(res.body, item.id);
 
                     if(categories.length > 0) {
-                        if(categories.length == 1)
-                            q.push(categories);
-                        else if(categories[0].depth_level != 5)
-                            q.push(categories[1]);
-                        else
-                            q.push(categories)
 
-                        // q.push(categories);//add next categories to query
+                        q.push(categories);//add next categories to query
                         log.step(categories.length);
                         callback(); //call callback in the end
                     }
