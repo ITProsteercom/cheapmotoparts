@@ -113,28 +113,32 @@ async function syncProducts() {
     });
 }
 
-async function loadDiagram(diagram_url) {
-    let imageName = null;
+async function loadDiagram(Category) {
 
-    if (!!diagram_url) {
+    return new Promise(async (resolve, reject) => {
 
-        let imageName = getImageName(diagram_url);
-        let imageSavePath = path.join(ocImagesPath + imageName);
+        let imageName = null;
 
-        if (await fileExists(imageSavePath)) {
-            log.i(`Diagram ${imageName} already exists!`);
-        } else {
-            try {
-                console.log(`Loading diagram: ${imageName}`);
-                await downloadZoomableImage(diagram_url, imageSavePath);
-            } catch (e) {
-                let message = `ID: ${psSection.id}\nName: ${psSection.section}\nURL: ${psSection.diagram_url}\nError Message: ${e.message}\n\n`;
-                console.log(`Error loading -  ${message}\n${e.message}`);
+        if (!!Category.diagram_url) {
+
+            let imageName = getImageName(Category.diagram_url);
+            let imageSavePath = path.join(ocImagesPath + imageName);
+
+            if (await fileExists(imageSavePath)) {
+                log.i(`Diagram ${imageName} already exists!`);
+            } else {
+                try {
+                    console.log(`Loading diagram: ${imageName}`);
+                    await downloadZoomableImage(Category.diagram_url, imageSavePath);
+                } catch (e) {
+                    let message = `ID: ${Category.id}\nName: ${Category.section}\nURL: ${Category.diagram_url}\nError Message: ${e.message}\n\n`;
+                    reject(`Error loading -  ${message}\n${e.message}`);
+                }
             }
         }
 
-        return imageName;
-    }
+        resolve(imageName);
+    });
 }
 
 async function downloadZoomableImage(imageUrl, filename) {
@@ -204,7 +208,7 @@ function getCategoryOptions(psCategory) {
     }
 
     if(!!psCategory.diagram_url) {
-        options.image = loadDiagram(psCategory.diagram_url);
+        options.image = loadDiagram(psCategory);
     }
 
     return options;
