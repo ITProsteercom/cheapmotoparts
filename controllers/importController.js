@@ -12,8 +12,7 @@ const ocDatabase = database.opencart;
 const categoryController = require('./categoryController');
 const { createProgressBar, fileExists, getRandomInRange } = require('./utils');
 
-//const ocImagesPath = '/var/www/html/image/';
-const ocImagesPath = 'D:/OpenServer/domains/cheapmotoparts.dev/image/';
+const ocImagesPath = ENV.OC_IMAGES_PATH || '/var/www/html/image/';
 const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
 const MAX_NETWORK_REQUESTS = +ENV.MAX_NETWORK_REQUESTS || 20;
 
@@ -36,6 +35,8 @@ async function sync() {
     await syncCategory();
 
     await syncDiagrams();
+
+    await syncManufacturers();
 
     await syncProducts();
 }
@@ -88,10 +89,8 @@ async function syncDiagrams() {
             }
         });
 
-        console.log('componentsTotal = '+componentsTotal);
-
         if (!componentsTotal) {
-            console.log('all diagrams have been synchronized');
+            log.i('all diagrams have been synchronized');
             resolve(true);
         }
 
@@ -111,7 +110,7 @@ async function syncDiagrams() {
             });
 
             if (!psCategories.length) {
-                console.log('all diagrams have been synchronized');
+                log.i('all diagrams have been synchronized');
                 resolve(true);
             }
 
@@ -133,6 +132,28 @@ async function syncDiagrams() {
     })
 }
 
+async function syncManufacturers() {
+
+    return new Promise(async (resolve, reject) => {
+
+        let psManufacturers = psDatabase.Category.findAll({
+            where: { depth_level: 1 }
+        });
+
+        let ocManufacturers = await ocDatabase.Manufacturer.findAll();
+
+        await Promise.map(psManufacturers, async (psManufacturer) => {
+
+            let result = ocManufacturers.filter(ocManufacturer => ocManufacturer.name == psManufacturer.name);
+            if(!result.length) {
+                await ocDatabase.Manufacturer.create({name: psManufacturer.name});
+            }
+        });
+        log.i('all manufacturers have been synchronized');
+        resolve(true);
+    });
+}
+
 async function syncProducts() {
 
     return new Promise(async (resolve, reject) => {
@@ -140,7 +161,7 @@ async function syncProducts() {
         const productsTotal = await psDatabase.Product.count();
 
         if (!productsTotal) {
-            console.log('all products have been synchronized');
+            log.i('all products have been synchronized');
             resolve(true);
         }
 
@@ -153,12 +174,15 @@ async function syncProducts() {
             });
 
             await Promise.map(products, async(psProduct) => {
+                let manufacturerName = psProduct.url.slice(1).split('/')[1];
+                let ocManufacturer = ocDatabase.Manufacturer.findAll({where: {name: manufacturerName}});
+
                 const ocProduct = await ocDatabase.Product.upsertFromParser({
                     name: psProduct.name,
                     sku: psProduct.sku,
                     price: psProduct.price * 1.15,
                     alias: psProduct.sku,
-                    manufacturer_id: psProduct.Category && psProduct.Category[0] ? psProduct.Category[0].manufacturer_id : 0
+                    manufacturer_id: ocManufacturer ? ocManufacturer.manufacturer_id : 0
                 });
 
                 const categories = psProduct.Category.map(cat => cat.opencart_id);

@@ -126,69 +126,6 @@ module.exports = function (sequelize, DataTypes) {
         tableName: 'product'
     });
 
-    Product.manufacturerFromParser2openCart = function(manufId){
-        switch (''+manufId){
-            case 'Honda':
-            case '1': return 11;
-            case '2': return 13;
-            case '3': return 14;
-            case '4': return 12;
-
-            case 'All Balls': return 15;
-            case 'Arrowhead': return 16;
-            case 'Athena': return 17;
-            case 'Continental': return 18;
-            case 'Crazy Iron': return 19;
-            case 'Cylinder Works': return 20;
-            case 'Denso': return 21;
-            case 'DID': return 22;
-            case 'DID DirtStar': return 23;
-            case 'DT-1': return 24;
-            case 'Dunlop': return 25;
-            case 'EBC': return 26;
-            case 'ESJOT': return 27;
-            case 'Faction MX': return 28;
-            case 'Gaerne': return 29;
-            case 'GOLDfren': return 30;
-            case 'Hiflo': return 31;
-            case 'Hot Cams': return 33;
-            case 'HotRods': return 34;
-            case 'HZ Goggles': return 35;
-            case 'ICON': return 36;
-            case 'JT': return 37;
-            case 'JTC': return 38;
-            case 'Just1': return 39;
-            case 'Maxxis': return 40;
-            case 'Metzeler': return 41;
-            case 'Michelin': return 42;
-            case 'Mitaka': return 43;
-            case 'Mitas': return 44;
-            case 'Moose Racing': return 45;
-            case 'Motion Pro': return 46;
-            case 'Moto Professional': return 47;
-            case 'Motul': return 48;
-            case 'NGK': return 49;
-            case 'P&W': return 50;
-            case 'Pirelli': return 51;
-            case 'ProX': return 52;
-            case 'PRP': return 53;
-            case 'Pyramid Parts': return 54;
-            case 'RTech': return 55;
-            case 'Scott': return 56;
-            case 'Shinko': return 57;
-            case 'Supersprox': return 58;
-            case 'Symotic': return 59;
-            case 'TRW': return 60;
-            case 'Venhill': return 61;
-            case 'Vertex': return 62;
-            case 'VP': return 63;
-            case 'Winderosa': return 64;
-            case 'X-Ti': return 65;
-
-            default: return 0;
-        }
-    };
-
     Product.findBySku = async function(sku) {
         return await Product.find({
             where: { sku },
@@ -200,12 +137,7 @@ module.exports = function (sequelize, DataTypes) {
         let product = await Product.findBySku(input.sku);
 
         if (product) {
-            if(!(+product.manufacturer_id)) {
-                product.manufacturer_id = Product.manufacturerFromParser2openCart(input.manufacturer_id);
-                await product.save();
-                return product;
-            }
-
+            await product.save();
             return product;
         }
 
@@ -216,7 +148,7 @@ module.exports = function (sequelize, DataTypes) {
             status: !!input.price ? 1 : 0,
             image: input.image,
             quantity: input.quantity,
-            manufacturer_id: Product.manufacturerFromParser2openCart(input.manufacturer_id)
+            manufacturer_id: input.manufacturer_id
         });
 
         try {
