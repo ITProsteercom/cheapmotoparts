@@ -5,18 +5,22 @@ const log = require('cllc')();
 const needle = require('needle');
 const tress = require('tress');
 var Promise = require("bluebird");
+const path = require('path');
+const childProcess = require('child_process');
 
 const db = require('../models/database').parser;
 
 const authController = require('./authController');
 const categoryController = require('./categoryController');
+const { fileExists, getRandomInRange } = require('./utils');
 
 const { intersect } = require('./utils');
 
 const PARALLEL_STREAMS = +ENV.PARALLEL_STREAMS || 10;
 const TIME_WAITING = +ENV.TIME_WAITING || 300000; //default 5 minutes
+const ocImagesPath = ENV.OC_IMAGES_PATH || '/var/www/html/image/';
 
-parse();
+//parse();
 
 async function parse() {
 
@@ -305,7 +309,63 @@ async function parse() {
     }
 }
 
+async function loadDiagram(Category) {
+
+    return new Promise(async (resolve, reject) => {
+
+        let imageName = null;
+
+        if (!!Category.diagram_url) {
+
+            imageName = getImageName(Category.diagram_url);
+            let imageSavePath = path.join(ocImagesPath + imageName);
+
+            if (await fileExists(imageSavePath)) {
+                debug(`Diagram ${imageName} already exists!`);
+            } else {
+                try {
+                    debug(`Loading diagram: ${imageName}`);
+                    await downloadZoomableImage(Category.diagram_url, imageSavePath);
+                    resolve(imageName);
+                } catch (e) {
+                    let message = `ID: ${Category.id}\nName: ${Category.name}\nURL: ${Category.diagram_url}\nError Message: ${e.message}\n\n`;
+                    log.w(`Error loading -  ${message}\n${e.message}`);
+                }
+            }
+        }
+
+        resolve(imageName);
+    });
+}
+
+async function downloadZoomableImage(imageUrl, filename) {
+    let port = '150' + getRandomInRange(10, 99);
+    const command = `node ./dezoomify/node-app/dezoomify-node.js ${imageUrl} ${filename} ${port}`;
+
+    return await Promise.promisify(childProcess.exec)(command);
+}
+
+function getImageName(diagram_url) {
+
+    let imageXMLPath = diagram_url
+        .replace('https://','')
+        .replace('http://','')
+        .split('/');
+
+    imageXMLPath.splice(0, 1);
+    imageXMLPath.splice(-1, 1);
+
+    let filename = '';
+    if(imageXMLPath.length)
+        filename = imageXMLPath.join('-') + '.jpg';
+    else
+        filename = 'noimg.img';
+
+    return path.join('catalog/diagrams/', filename);
+}
+
 
 module.exports = {
-    parse
+    parse,
+    loadDiagram
 };

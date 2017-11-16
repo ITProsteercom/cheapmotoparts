@@ -137,7 +137,7 @@ module.exports = function (sequelize, DataTypes) {
         let product = await Product.findBySku(input.sku);
 
         if (product) {
-            await product.save();
+            await product.save(input);
             return product;
         }
 

@@ -1,18 +1,16 @@
 const ENV = require('dotenv').load().parsed;
 const log = require('cllc')();
 const debug = require('debug')('controller:import');
-const path = require('path');
 const Promise = require('bluebird');
-const childProcess = require('child_process');
 
 const database = require('../models/database');
 const psDatabase = database.parser;
 const ocDatabase = database.opencart;
 
 const categoryController = require('./categoryController');
-const { createProgressBar, fileExists, getRandomInRange } = require('./utils');
+const diagramController = require('./diagramController');
+const { createProgressBar } = require('./utils');
 
-const ocImagesPath = ENV.OC_IMAGES_PATH || '/var/www/html/image/';
 const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
 const MAX_DIAGRAM_REQUESTS = +ENV.MAX_DIAGRAM_REQUESTS || 20;
 
@@ -47,7 +45,6 @@ async function syncCategory() {
     await syncCategoryLevel();
     log.i('...categories synchronization was completed successfully');
 }
-
 
 async function syncCategoryLevel(depth_level = 1) {
 
@@ -126,16 +123,16 @@ async function syncDiagrams() {
 
                 await Promise.map(psCategories, async (psCategory) => {
 
-                    let image = await loadDiagram(psCategory);
+                    let image = await diagramController.loadDiagram(psCategory);
 
                     let ocCategory = await ocDatabase.Category.findById(psCategory.opencart_id);
 
-                    ocCategory.update({ image });
+                    await ocCategory.update({ image });
 
                     componentsHandled += 1;
                     progress.tick();
                 }, {
-                    concurrency: 1
+                    concurrency: MAX_DIAGRAM_REQUESTS
                 });
             }
 
@@ -174,97 +171,54 @@ async function syncProducts() {
 
     return new Promise(async (resolve, reject) => {
 
-        const productsTotal = await psDatabase.Product.count();
+        try {
+            const productsTotal = await psDatabase.Product.count();
 
-        if (!productsTotal) {
-            log.i('all products have been synchronized');
-            resolve(true);
-        }
+            if (!productsTotal) {
+                log.i('all products have been synchronized');
+                resolve(true);
+            }
 
-        const progress = createProgressBar('synchronizing products', productsTotal);
-        let productsHandled = 0;
-        while (productsHandled < productsTotal) {
-            let products = await psDatabase.Product.findAll({
-                include: [psDatabase.Category],
-                limit: MAX_OPEN_DB_CONNECTIONS
-            });
-
-            await Promise.map(products, async(psProduct) => {
-                let manufacturerName = psProduct.url.slice(1).split('/')[1];
-                let ocManufacturer = ocDatabase.Manufacturer.findAll({where: {name: manufacturerName}});
-
-                const ocProduct = await ocDatabase.Product.upsertFromParser({
-                    name: psProduct.name,
-                    sku: psProduct.sku,
-                    price: psProduct.price * 1.15,
-                    alias: psProduct.sku,
-                    manufacturer_id: ocManufacturer ? ocManufacturer.manufacturer_id : 0
+            const progress = createProgressBar('synchronizing products', productsTotal);
+            let productsHandled = 0;
+            while (productsHandled < productsTotal) {
+                let products = await psDatabase.Product.findAll({
+                    include: [psDatabase.Category],
+                    limit: MAX_OPEN_DB_CONNECTIONS,
+                    offset: productsHandled
                 });
 
-                const categories = psProduct.Category.map(cat => cat.opencart_id);
-                await ocDatabase.ProductToCategory.assignCategories(ocProduct, categories);
-                await psProduct.update({opencart_id: ocProduct.product_id, sync: true});
+                await Promise.map(products, async (psProduct) => {
+                    //parse manufacturer name from product url
+                    let manufacturerName = psProduct.url.slice(1).split('/')[1];
 
-                productsHandled += 1;
-                progress.tick();
-            });
-        }
-    });
-}
+                    let ocManufacturer = await ocDatabase.Manufacturer.findAll({where: {name: manufacturerName}});
 
-async function loadDiagram(Category) {
+                    const ocProduct = await ocDatabase.Product.upsertFromParser({
+                        name: psProduct.name,
+                        sku: psProduct.sku,
+                        price: psProduct.price * 1.15,
+                        alias: psProduct.sku,
+                        manufacturer_id: ocManufacturer ? ocManufacturer.manufacturer_id : 0
+                    });
 
-    return new Promise(async (resolve, reject) => {
+                    const categories = psProduct.Categories.map(cat => cat.opencart_id);
+                    await ocDatabase.ProductToCategory.assignCategories(ocProduct, categories);
+                    await psProduct.update({opencart_id: ocProduct.product_id, sync: true});
 
-        let imageName = null;
-
-        if (!!Category.diagram_url) {
-
-            imageName = getImageName(Category.diagram_url);
-            let imageSavePath = path.join(ocImagesPath + imageName);
-
-            if (await fileExists(imageSavePath)) {
-                debug(`Diagram ${imageName} already exists!`);
-            } else {
-                try {
-                    debug(`Loading diagram: ${imageName}`);
-                    await downloadZoomableImage(Category.diagram_url, imageSavePath);
-                    resolve(imageName);
-                } catch (e) {
-                    let message = `ID: ${Category.id}\nName: ${Category.name}\nURL: ${Category.diagram_url}\nError Message: ${e.message}\n\n`;
-                    log.w(`Error loading -  ${message}\n${e.message}`);
-                }
+                    productsHandled += 1;
+                    progress.tick();
+                }, {
+                    concurrency: MAX_OPEN_DB_CONNECTIONS
+                });
             }
+            log.i('...products synchronization was completed successfully');
+            resolve(true);
         }
-
-        resolve(imageName);
+        catch (err) {
+            reject(err);
+        }
     });
-}
-
-async function downloadZoomableImage(imageUrl, filename) {
-    let port = '150' + getRandomInRange(10, 99);
-    const command = `node ./dezoomify/node-app/dezoomify-node.js ${imageUrl} ${filename} ${port}`;
-
-    return await Promise.promisify(childProcess.exec)(command);
-}
-
-function getImageName(diagram_url) {
-
-    let imageXMLPath = diagram_url
-            .replace('https://','')
-            .replace('http://','')
-            .split('/');
-
-    imageXMLPath.splice(0, 1);
-    imageXMLPath.splice(-1, 1);
-    
-    let filename = '';
-    if(imageXMLPath.length)
-        filename = imageXMLPath.join('-') + '.jpg';
-    else
-        filename = 'noimg.img';
-
-    return path.join('catalog/diagrams/', filename);
 }
 
 async function updateOpencartCategories (psCategories) {
