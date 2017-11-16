@@ -1,15 +1,15 @@
 {
   "parser": {
-    "username": "root",
-    "password": "",
+    "username": "dev",
+    "password": "dev",
     "database": "parser",
     "host": "localhost",
     "dialect": "mysql",
     "timezone": "+00:00"
   },
   "opencart": {
-    "username": "root",
-    "password": "",
+    "username": "dev",
+    "password": "dev",
     "database": "cheapmotoparts",
     "host": "localhost",
     "dialect": "mysql",

@@ -59,23 +59,30 @@ async function load(url = '/catalog') {
                         return callback(true); // return url at the beginning of th e turn
                     }
 
-                    //parse and save categories
-                    let categories = await categoryController.loadCategories(res.body, item.id);
+                    try {
+                        //parse and save categories
+                        let categories = await categoryController.loadCategories(res.body, item.id);
 
-                    if(categories.length > 0) {
+                        if (categories.length > 0) {
 
-                        q.push(categories);//add next categories to query
-                        log.step(categories.length);
-                        callback(); //call callback in the end
+                            //q.push(categories);//add next categories to query
+                            log.step(categories.length);
+                            callback(); //call callback in the end
+                        }
+                        else {
+                            //parse and save products
+                            let products = await productController.loadProducts(res.body);
+                            //add products to categories associations
+                            await productToCategoryController.saveProductsToCategory(products, item.id);
+
+                            log.step(0, products.length);
+                            callback();
+                        }
                     }
-                    else {
-                        //parse and save products
-                        let products = await productController.loadProducts(res.body);
-                        //add products to categories associations
-                        await productToCategoryController.saveProductsToCategory(products, item.id);
-
-                        log.step(0, products.length);
-                        callback();
+                    catch(err) {
+                        log.w(err);
+                        //if any error retry
+                        return callback(true);
                     }
             });
         }

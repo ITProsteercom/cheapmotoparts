@@ -20,11 +20,10 @@ async function run() {
 
     log.i('Parser started');
     try {
-        // /catalog/yamaha/motorcycle/2017/xvs95chs/seat
         await parseController.load('/catalog');
     }
     catch (e) {
-        debug(e);
+        log.w(e);
     }
 
     db.sequelize.close();
