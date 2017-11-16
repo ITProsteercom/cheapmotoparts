@@ -45,35 +45,41 @@ async function syncCategory(depth_level = 1) {
 
     return new Promise(async (resolve, reject) => {
 
-        let psCategoryHandled = 0;
-        const psCategoryTotal = await categoryController.count({ depth_level: depth_level });
+        try {
+            let psCategoryHandled = 0;
+            const psCategoryTotal = await categoryController.count({ depth_level: depth_level });
 
-        if(psCategoryTotal == 0) {
+            if(psCategoryTotal == 0) {
+                resolve(true);
+                return;
+            }
+
+            while(psCategoryHandled < psCategoryTotal) {
+
+                //get category list from DB
+                let psCategories = await psDatabase.Category.findAll({
+                    where: { depth_level: depth_level },
+                    include: [{model: psDatabase.Category, as: 'Parent'}],
+                    limit: MAX_OPEN_DB_CONNECTIONS,
+                    offset: psCategoryHandled
+                });
+
+                //update categories in opencar db and return parser category models with opencart ids
+                let categories = await updateOpencartCategories(psCategories);
+
+                //mark categories in parser db as synchronized and go sync children in each
+                await categoryController.upsertAndReturnCategories(categories, depth_level);
+
+                progress.tick(psCategories.length);
+                psCategoryHandled += psCategories.length;
+            }
+
+            await syncCategory(++depth_level);
             resolve(true);
-            return;
         }
-
-        while(psCategoryHandled < psCategoryTotal) {
-
-            //get category list from DB
-            let psCategories = await psDatabase.Category.findAll({
-                where: { depth_level: depth_level },
-                include: [{model: psDatabase.Category, as: 'Parent'}],
-                limit: MAX_OPEN_DB_CONNECTIONS,
-                offset: psCategoryHandled
-            });
-
-            //update categories in opencar db and return parser category models with opencart ids
-            let categories = await updateOpencartCategories(psCategories);
-
-            //mark categories in parser db as synchronized and go sync children in each
-            await categoryController.upsertAndReturnCategories(categories, depth_level);
-
-            progress.tick(psCategories.length);
-            psCategoryHandled += psCategories.length;
+        catch(err) {
+            reject(err);
         }
-        resolve(true);
-        syncCategory(++depth_level);
     });
 }
 
@@ -81,55 +87,60 @@ async function syncDiagrams() {
 
     return new Promise(async (resolve, reject) => {
 
-        const componentsTotal = await psDatabase.Category.count({
-            where: {
-                depth_level: 5,
-                diagram_url: {$ne: null},
-                opencart_id: {$ne: null}
-            }
-        });
-
-        if (!componentsTotal) {
-            log.i('all diagrams have been synchronized');
-            resolve(true);
-        }
-
-        let componentsHandled = 0;
-        const progress = createProgressBar('synchronizing diagrams', componentsTotal);
-
-        do {
-            //get from parser DB component list with diagrams and sync with opencart DB
-            let psCategories = await psDatabase.Category.findAll({
+        try {
+            const componentsTotal = await psDatabase.Category.count({
                 where: {
                     depth_level: 5,
                     diagram_url: {$ne: null},
                     opencart_id: {$ne: null}
-                },
-                limit: MAX_OPEN_DB_CONNECTIONS,
-                offset: componentsHandled
+                }
             });
 
-            if (!psCategories.length) {
+            if (!componentsTotal) {
                 log.i('all diagrams have been synchronized');
                 resolve(true);
             }
 
-            await Promise.map(psCategories, async (psCategory) => {
+            let componentsHandled = 0;
+            const progress = createProgressBar('synchronizing diagrams', componentsTotal);
 
-                let image = await loadDiagram(psCategory);
+            do {
+                //get from parser DB component list with diagrams and sync with opencart DB
+                let psCategories = await psDatabase.Category.findAll({
+                    where: {
+                        depth_level: 5,
+                        diagram_url: {$ne: null},
+                        opencart_id: {$ne: null}
+                    },
+                    limit: MAX_OPEN_DB_CONNECTIONS,
+                    offset: componentsHandled
+                });
 
-                let ocCategory = await ocDatabase.Category.findById(psCategory.opencart_id);
+                if (!psCategories.length) {
+                    log.i('all diagrams have been synchronized');
+                    resolve(true);
+                }
 
-                ocCategory.update({ image });
+                await Promise.map(psCategories, async (psCategory) => {
 
-                componentsHandled += 1;
-                progress.tick();
-            }, {
-                concurrency: MAX_NETWORK_REQUESTS
-            });
+                    let image = await loadDiagram(psCategory);
 
-        } while(componentsHandled <= componentsTotal)
-    })
+                    let ocCategory = await ocDatabase.Category.findById(psCategory.opencart_id);
+
+                    ocCategory.update({ image });
+
+                    componentsHandled += 1;
+                    progress.tick();
+                }, {
+                    concurrency: MAX_NETWORK_REQUESTS
+                });
+
+            } while(componentsHandled <= componentsTotal);
+        }
+        catch(err) {
+            reject(err);
+        }
+    });
 }
 
 async function syncManufacturers() {
@@ -228,7 +239,7 @@ async function downloadZoomableImage(imageUrl, filename) {
     let port = '150' + getRandomInRange(10, 99);
     const command = `node ./dezoomify/node-app/dezoomify-node.js ${imageUrl} ${filename} ${port}`;
 
-    await Promise.promisify(childProcess.exec)(command);
+    return await Promise.promisify(childProcess.exec)(command);
 }
 
 function getImageName(diagram_url) {
