@@ -5,7 +5,7 @@ const debug = require('debug')('app');
 const log = require('cllc')();
 const argv = require('yargs').argv;
 
-const appController = require('./controllers/appController');
+const parseController = require('./controllers/parseController');
 
 global.appConfig = utils.setAppConfig(['make', 'cat', 'year', 'model'], argv);
 
@@ -21,7 +21,7 @@ async function run() {
     log.i('Parser started');
     try {
         // /catalog/yamaha/motorcycle/2017/xvs95chs/seat
-        await appController.load('/catalog');
+        await parseController.load('/catalog');
     }
     catch (e) {
         debug(e);

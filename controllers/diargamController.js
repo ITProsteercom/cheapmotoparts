@@ -1,4 +1,4 @@
-//require('dotenv').load();
+const ENV = require('dotenv').load().parsed;
 const cheerio = require('cheerio');
 const debug = require('debug')('controller:diagram');
 const log = require('cllc')();
@@ -11,12 +11,17 @@ const db = require('../models/database').parser;
 const authController = require('./authController');
 const categoryController = require('./categoryController');
 
+const { intersect } = require('./utils');
+
+const PARALLEL_STREAMS = +ENV.PARALLEL_STREAMS || 10;
+const TIME_WAITING = +ENV.TIME_WAITING || 300000; //default 5 minutes
+
 parse();
 
 async function parse() {
 
     var componentsToUpdate = [];
-    var q = tress(queryParsingCallback, 5);// 5 parallel streams
+    var q = tress(queryParsingCallback, PARALLEL_STREAMS);// 5 parallel streams
 
     q.retry = function () {
         q.pause();
@@ -25,10 +30,16 @@ async function parse() {
         setTimeout(function () {
             q.resume();
             log.i('Resumed');
-        }, 60000); // 1 minute
+        }, TIME_WAITING);
     };
 
     q.drain = async function () {
+
+        if(componentsToUpdate.length) {
+            await categoryController.updateCategories(componentsToUpdate);
+        }
+
+        log.finish();
         log.i('...finish processing data');
 
         db.sequelize.close();
@@ -104,7 +115,11 @@ async function parse() {
         await Promise.map(partzillaModels, async(partzillaModel) => {
 
             let partshouseModel = partshouseModels.find((partshouseModel) => {
-                return partshouseModel.name == partzillaModel.name;
+                let parthouseName = prepareModelName(partshouseModel.name);
+                let partzillaName = prepareModelName(partzillaModel.name);
+
+                //check if partshouse name contains partzilla name
+                return intersect(parthouseName, partzillaName).length;
             });
 
             if (typeof partshouseModel !== 'undefined') {
@@ -132,7 +147,7 @@ async function parse() {
         await Promise.map(partzillaComponents, async(partzillaComponent) => {
 
             let partshouseComponent = partshouseComponents.find((partshouseComponent) => {
-                return partshouseComponent.name.toLowerCase() == partzillaComponent.name.toLowerCase();
+                return partshouseComponent.name == partzillaComponent.name;
             });
 
             if (typeof partshouseComponent !== 'undefined') {
@@ -277,6 +292,13 @@ async function parse() {
                 return resolve(diagramUrl);
             });
         });
+    }
+
+    function prepareModelName(name) {
+        return name.replace(' (', ' - ')
+            .replace(')', '')
+            .toLowerCase()
+            .split(' - ');
     }
 }
 

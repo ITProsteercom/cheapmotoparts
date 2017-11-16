@@ -69,9 +69,21 @@ function getRandomInRange(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
 }
 
+function intersect(left, right) {
+    let intersect = [];
+
+    //compare left with right
+    let leftIntersect = left.filter((el) => right.indexOf(el) != -1);
+    //compare right with left
+    let rightIntersect = right.filter((el) => left.indexOf(el) != -1);
+
+    return intersect.concat(leftIntersect).concat(rightIntersect);
+}
+
 module.exports = {
     setAppConfig,
     createProgressBar,
     fileExists,
-    getRandomInRange
+    getRandomInRange,
+    intersect
 };
