@@ -1,4 +1,4 @@
-var default_config = require(__dirname + '/../config/config.js')["default"];
+var default_config = require(__dirname + '/../config/config.js').default;
 const ProgressBar = require('progress');
 const Promise = require('bluebird');
 const fs = require('fs');

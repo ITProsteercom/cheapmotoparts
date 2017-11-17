@@ -1,5 +1,5 @@
 const ENV = require('dotenv').load().parsed;
-const config = require('config.json')('./config/config.js');
+const config = require('../config/config.js');
 const debug = require('debug')('controller:parse');
 const log = require('cllc')();
 const needle = require('needle');
