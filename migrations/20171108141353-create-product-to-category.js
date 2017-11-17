@@ -23,7 +23,7 @@ module.exports = {
         }
       },
       diagram_number: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.STRING,
         allowNull: true,
       },
       required_quantity: {

@@ -16,7 +16,7 @@ module.exports = (sequelize, DataTypes) => {
       },
     },
     diagram_number: {
-      type: DataTypes.INTEGER
+      type: DataTypes.STRING
     },
     required_quantity: {
       type: DataTypes.INTEGER,
