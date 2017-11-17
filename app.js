@@ -23,13 +23,13 @@ run().then(function() {
 async function run() {
 
     try {
-        if (parser_steps.include('parse')) {
+        if (parser_steps.includes('parse')) {
             await parseController.load('/catalog');
         }
-        else if(parser_steps.include('diagram')) {
+        else if(parser_steps.includes('diagram')) {
             await diagramController.parse();
         }
-        else if(parser_steps.include('import')) {
+        else if(parser_steps.includes('import')) {
             await importController.run();
         }
     }
