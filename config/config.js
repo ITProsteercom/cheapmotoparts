@@ -1,16 +1,18 @@
-{
+const ENV = require('dotenv').load().parsed;
+
+module.exports = {
   "parser": {
-    "username": "dev",
-    "password": "dev",
-    "database": "parser",
+    "database": ENV.PARSER_DB_NAME,
+    "username": ENV.PARSER_DB_USERNAME,
+    "password": ENV.PARSER_DB_PASSWORD,
     "host": "localhost",
     "dialect": "mysql",
     "timezone": "+00:00"
   },
   "opencart": {
-    "username": "dev",
-    "password": "dev",
-    "database": "cheapmotoparts",
+    "database": ENV.OPENCART_DB_NAME,
+    "username": ENV.OPENCART_DB_USERNAME,
+    "password": ENV.OPENCART_DB_PASSWORD,
     "host": "localhost",
     "dialect": "mysql",
     "timezone": "+00:00",
@@ -29,4 +31,4 @@
     "cat": ["Motorcycle"],
     "year": 2015
   }
-}
+};

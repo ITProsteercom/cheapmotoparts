@@ -14,8 +14,8 @@ const operatorsAliases = {
 var db = {};
 var config = {};
 
-config.parser = require(__dirname + '/../config/config.json')['parser'];
-config.opencart = require(__dirname + '/../config/config.json')['opencart'];
+config.parser = require(__dirname + '/../config/config.js')['parser'];
+config.opencart = require(__dirname + '/../config/config.js')['opencart'];
 
 Object.keys(config).forEach(configName => {
 
