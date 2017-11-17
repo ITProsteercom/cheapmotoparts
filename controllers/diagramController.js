@@ -346,15 +346,21 @@ async function loadDiagram(Category) {
 }
 
 async function downloadZoomableImage(imageUrl, filename) {
+
     return new Promise(async (resolve, reject) => {
-        let port = '150' + getRandomInRange(10, 99);
-        const command = `node ./dezoomify/node-app/dezoomify-node.js ${imageUrl} ${filename} ${port}`;
 
-        await Promise.promisify(childProcess.exec)(command);
+        try {
+            let port = '150' + getRandomInRange(10, 99);
+            const command = `node ./dezoomify/node-app/dezoomify-node.js ${imageUrl} ${filename} ${port}`;
 
-        resolve(true);
+            await Promise.promisify(childProcess.exec)(command);
+
+            resolve(true);
+        }
+        catch( err ) {
+            reject(err);
+        }
     });
-
 }
 
 function getImageName(diagram_url) {
