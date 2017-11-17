@@ -29,7 +29,7 @@ module.exports = function (sequelize, DataTypes) {
         const input = categories.map(category => {
             return ({
                 product_id: product.product_id,
-                category_id: category.id,
+                category_id: category.opencart_id,
                 diagram_number: category.ProductToCategory.diagram_number,
                 required_qty: category.ProductToCategory.required_quantity
             });
