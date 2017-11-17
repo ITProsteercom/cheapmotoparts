@@ -11,6 +11,8 @@ const importController = require('./controllers/importController');
 
 global.appConfig = utils.setAppConfig(['make', 'cat', 'year', 'model'], argv);
 
+const parser_steps = argv.steps ? argv.steps.toLowerCase().split(',') : ['parse', 'diagram', 'import'];
+
 run().then(function() {
         log.i('Complete');
     })
@@ -21,11 +23,15 @@ run().then(function() {
 async function run() {
 
     try {
-        await parseController.load('/catalog');
-
-        await diagramController.parse();
-
-        await importController.run();
+        if (parser_steps.include('parse')) {
+            await parseController.load('/catalog');
+        }
+        else if(parser_steps.include('diagram')) {
+            await diagramController.parse();
+        }
+        else if(parser_steps.include('import')) {
+            await importController.run();
+        }
     }
     catch (e) {
         log.w(e);

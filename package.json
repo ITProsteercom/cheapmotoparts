@@ -6,8 +6,9 @@
   "scripts": {
     "start": "node ./app.js --make default --cat default --year default",
     "demo": "node ./app.js --make Honda --cat Motorcycle --year 2017",
-    "diagram": "node ./controllers/diagramController.js",
-    "import": "node ./controllers/importController.js",
+    "parse": "node ./app.js --steps parse",
+    "diagram": "node ./app.js --steps diagram",
+    "import": "node ./app.js --steps import",
     "db:refresh": "npm run db:drop && npm run db:create && npm run db:migrate",
     "db:drop": "node_modules/.bin/sequelize db:drop --env parser",
     "db:create": "node_modules/.bin/sequelize db:create --env parser",
