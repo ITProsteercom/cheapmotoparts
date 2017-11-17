@@ -15,6 +15,8 @@ const TIME_WAITING = +ENV.TIME_WAITING || 300000; //default 5 minutes
 
 async function load(url = '/catalog') {
 
+    log.i('Parsing data from partzilla started');
+
     global.cookiePartzilla = await authController.authPartzilla(config['partzilla']);
 
     return new Promise(async function (resolve, reject) {
@@ -26,7 +28,7 @@ async function load(url = '/catalog') {
 
         q.drain = function () {
             log.finish();
-            log.i('Loading of categories and products is finished!');
+            log.i('...completed!');
             resolve(false);
         };
 
@@ -64,6 +66,13 @@ async function load(url = '/catalog') {
                         let categories = await categoryController.loadCategories(res.body, item.id);
 
                         if (categories.length > 0) {
+
+                            if(categories.length == 1)
+                                q.push(categories);
+                            else if(categories[0].depth_level != 5)
+                                q.push(categories[1]);
+                            else
+                                q.push(categories);
 
                             //q.push(categories);//add next categories to query
                             log.step(categories.length);

@@ -74,11 +74,6 @@ async function parseCategoties(html_page, parent_id) {
 
         let name = $(this).text();
         let url = $(this).attr('href');
-        let depth_level = getDepthLevel(url);
-
-        //if it is Model category slice name to ' - '
-        // if(depth_level == 4)
-        //     name = name.replace(/\s-\s.*/, '');
 
         categories[i] = {
             parent_id: parent_id,

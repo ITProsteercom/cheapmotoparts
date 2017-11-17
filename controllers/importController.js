@@ -14,19 +14,29 @@ const { createProgressBar } = require('./utils');
 const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
 const MAX_DIAGRAM_REQUESTS = +ENV.MAX_DIAGRAM_REQUESTS || 20;
 
-sync()
-    .then(() => {
-        psDatabase.sequelize.close();
-        ocDatabase.sequelize.close();
-        log.i('...synchronization done');
-    })
-    .catch((err) => {
-        log.i(err);
+
+async function run() {
+
+    log.i('Importing data to opencart started');
+
+    return new Promise(async (resolve, reject) => {
+
+        await sync()
+            .then(() => {
+                psDatabase.sequelize.close();
+                ocDatabase.sequelize.close();
+                log.i('...completed!');
+                resolve(true);
+            })
+            .catch((err) => {
+                log.i(err);
+            });
     });
 
-async function sync() {
 
-    log.i('Start synchronization.....');
+}
+
+async function sync() {
 
     await syncCategory();
 
@@ -202,8 +212,7 @@ async function syncProducts() {
                         manufacturer_id: ocManufacturer ? ocManufacturer.manufacturer_id : 0
                     });
 
-                    const categories = psProduct.Categories.map(cat => cat.opencart_id);
-                    await ocDatabase.ProductToCategory.assignCategories(ocProduct, categories);
+                    await ocDatabase.ProductToCategory.assignCategories(ocProduct, psProduct.Categories);
                     await psProduct.update({opencart_id: ocProduct.product_id, sync: true});
 
                     productsHandled += 1;
@@ -266,5 +275,5 @@ function getCategoryOptions(psCategory) {
 
 
 module.exports = {
-    sync
+    run
 };

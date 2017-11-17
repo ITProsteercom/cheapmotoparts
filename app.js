@@ -6,6 +6,8 @@ const log = require('cllc')();
 const argv = require('yargs').argv;
 
 const parseController = require('./controllers/parseController');
+const diagramController = require('./controllers/diagramController');
+const importController = require('./controllers/importController');
 
 global.appConfig = utils.setAppConfig(['make', 'cat', 'year', 'model'], argv);
 
@@ -18,9 +20,12 @@ run().then(function() {
 
 async function run() {
 
-    log.i('Parser started');
     try {
         await parseController.load('/catalog');
+
+        await diagramController.parse();
+
+        await importController.run();
     }
     catch (e) {
         log.w(e);
