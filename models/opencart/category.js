@@ -92,7 +92,7 @@ module.exports = function (sequelize) {
         if (options.urlAlias) {
             await sequelize.models.UrlAlias.create({
                 query: `category_id=${category.category_id}`,
-                keyword: options.urlAlias.replace(/\//g,'').replace(' - ','-').replace(/\s/g,'-'),
+                keyword: lodash.kebabCase(options.urlAlias.replace(/\//g,'')),
             });
         }
 

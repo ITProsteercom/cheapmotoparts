@@ -154,7 +154,7 @@ module.exports = function (sequelize, DataTypes) {
         try {
             await sequelize.models.UrlAlias.create({
                 query: 'product_id=' + product.product_id,
-                keyword: lodash.snakeCase(`${input.name}-${input.sku}`),
+                keyword: lodash.kebabCase(`${input.name}-${input.sku}`),
             });
         } catch (e) {
             // do nothing
@@ -196,6 +196,29 @@ module.exports = function (sequelize, DataTypes) {
                 `, { replacements: { productId: product.product_id } });
 
         return product;
+    };
+
+    Product.prototype.assignCategories = async function(categories) {
+
+        await categories.map(async category => {
+
+            let defaults = {
+                diagram_number: category.ProductToCategory.diagram_number,
+                required_qty: category.ProductToCategory.required_quantity
+            };
+
+            let [productToCategory, created] = await sequelize.models.ProductToCategory.findOrCreate({
+                where: {
+                    product_id: this.product_id,
+                    category_id: category.opencart_id
+                },
+                defaults: defaults
+            });
+
+            if(created) {
+                await productToCategory.update(defaults);
+            }
+        });
     };
 
     return Product;

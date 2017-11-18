@@ -204,15 +204,14 @@ async function syncProducts() {
 
                     let ocManufacturer = await ocDatabase.Manufacturer.findAll({where: {name: manufacturerName}});
 
-                    const ocProduct = await ocDatabase.Product.upsertFromParser({
+                    let ocProduct = await ocDatabase.Product.upsertFromParser({
                         name: psProduct.name,
                         sku: psProduct.sku,
                         price: psProduct.price * 1.15,
                         alias: psProduct.sku,
                         manufacturer_id: ocManufacturer ? ocManufacturer.manufacturer_id : 0
                     });
-
-                    await ocDatabase.ProductToCategory.assignCategories(ocProduct, psProduct.Categories);
+                    await ocProduct.assignCategories(psProduct.Categories);
                     await psProduct.update({opencart_id: ocProduct.product_id, sync: true});
 
                     productsHandled += 1;
@@ -263,7 +262,8 @@ function getCategoryOptions(psCategory) {
     let options = [];
 
     if(!!psCategory.Parent) {
-        options.urlAlias = `${psCategory.Parent.name.toLowerCase()}-${psCategory.name}`;
+        //options.urlAlias = `${psCategory.Parent.name}-${psCategory.name}`;
+        options.urlAlias = `${psCategory.name}-${psCategory.opencart_id}`;
         options.parentId = psCategory.Parent.opencart_id;
     }
     else {
