@@ -12,6 +12,7 @@ const importController = require('./controllers/importController');
 global.appConfig = utils.setAppConfig(['make', 'cat', 'year', 'model'], argv);
 
 const parser_steps = argv.steps ? argv.steps.toLowerCase().split(',') : ['parse', 'diagram', 'import'];
+const import_steps = argv.sync ? argv.sync.toLowerCase().split(',') : ['category', 'make', 'diagram', 'product'];
 
 run().then(function() {
         log.i('Complete');
@@ -30,7 +31,7 @@ async function run() {
             await diagramController.parse();
         }
         else if(parser_steps.includes('import')) {
-            await importController.run();
+            await importController.run(import_steps);
         }
     }
     catch (e) {

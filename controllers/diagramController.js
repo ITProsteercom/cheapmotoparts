@@ -152,7 +152,7 @@ async function parse() {
         async function processComponents(params) {
 
             let partshouseComponents = await getPartshouseComponents(params.url, params.cookies);
-            let partzillaComponents = await categoryController.getChildrenList(params.model.id);
+            let partzillaComponents = await categoryController.getChildrenList(params.model.id, { diagram_url: [$ne, null]});
 
             await Promise.map(partzillaComponents, async (partzillaComponent) => {
 
@@ -297,7 +297,10 @@ async function parse() {
                     if (err)
                         return reject(err);
 
-                    let diagramUrl = res.body.match(/assempath\s=\s*'(\S*)'/)[1];
+                    let diagramUrl = null;
+
+                    if(!!res.body.match(/assempath\s=\s*'(\S*)'/))
+                        diagramUrl = res.body.match(/assempath\s=\s*'(\S*)'/)[1];
 
                     if (diagramUrl == 'noimg/assembly.xml')
                         diagramUrl = null;

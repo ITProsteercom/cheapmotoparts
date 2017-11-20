@@ -15,13 +15,13 @@ const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
 const MAX_DIAGRAM_REQUESTS = +ENV.MAX_DIAGRAM_REQUESTS || 20;
 
 
-async function run() {
+async function run(import_steps = ['category', 'diagram', 'make', 'products']) {
 
     log.i('Importing data to opencart started');
 
     return new Promise(async (resolve, reject) => {
 
-        await sync()
+        await sync(import_steps)
             .then(() => {
                 psDatabase.sequelize.close();
                 ocDatabase.sequelize.close();
@@ -36,15 +36,20 @@ async function run() {
 
 }
 
-async function sync() {
+async function sync(import_steps) {
 
-    await syncCategory();
-
-    await syncDiagrams();
-
-    await syncManufacturers();
-
-    await syncProducts();
+    if(import_steps.includes('category')) {
+        await syncCategory();
+    }
+    else if(import_steps.includes('diagram')) {
+        await syncDiagrams();
+    }
+    else if(import_steps.includes('make')) {
+        await syncManufacturers();
+    }
+    else if(import_steps.includes('product')) {
+        await syncProducts();
+    }
 }
 
 async function syncCategory() {
