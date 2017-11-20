@@ -15,7 +15,7 @@ const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
 const MAX_DIAGRAM_REQUESTS = +ENV.MAX_DIAGRAM_REQUESTS || 20;
 
 
-async function run(import_steps = ['category', 'diagram', 'make', 'products']) {
+async function run(import_steps = ['category', 'diagram', 'make', 'product']) {
 
     log.i('Importing data to opencart started');
 

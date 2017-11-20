@@ -12,7 +12,6 @@ const categoryChain = {
     5: 'component'
 };
 
-
 async function loadCategories(html, parent_id) {
 
     //parse categories
@@ -57,8 +56,9 @@ function filterCategories(categoryList) {
 
     return categoryList.filter(function (category) {
 
-        if(category_type == 'year')
-            return +category.name >= filterUrl;
+        if(category_type == 'year') {
+            return +category.name >= filterUrl[0] && +category.name <= filterUrl[1];
+        }
 
         return filterUrl.includes(category.name);
     });

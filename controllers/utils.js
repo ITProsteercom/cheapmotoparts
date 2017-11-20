@@ -13,15 +13,18 @@ function setAppConfig(arConfig, argv) {
     return appConfig;
 }
 
-function setConfig(consoleList, defaultList) {
+function setConfig(configValue, defaultList) {
 
-    if(consoleList == 'default')
-        return defaultList;
-
-    if(typeof consoleList === 'undefined' || consoleList.length == 0)
+    if(typeof configValue === 'undefined' || configValue.length == 0)
         return null;
 
-    return formatTitleCase(consoleList);
+    if(configValue == 'default')
+        return defaultList;
+
+    if(String(configValue).split(',').length)
+        return String(configValue).split(',');
+
+    return formatTitleCase(configValue);
 }
 
 function formatTitleCase(str) {

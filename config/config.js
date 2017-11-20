@@ -29,6 +29,6 @@ module.exports = {
   "default": {
     "make": ["Honda", "Kawasaki", "Suzuki", "Yamaha"],
     "cat": ["Motorcycle"],
-    "year": 2015
+    "year": [1988, 2018]
   }
 };
