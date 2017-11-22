@@ -264,16 +264,12 @@ async function updateOpencartCategories (psCategories) {
 
 function getCategoryOptions(psCategory) {
 
-    let options = [];
+    let options = {
+        urlAlias: psCategory.name
+    };
 
-    if(!!psCategory.Parent) {
-        //options.urlAlias = `${psCategory.Parent.name}-${psCategory.name}`;
-        options.urlAlias = `${psCategory.name}-${psCategory.opencart_id}`;
+    if(!!psCategory.Parent)
         options.parentId = psCategory.Parent.opencart_id;
-    }
-    else {
-        options.urlAlias = psCategory.name;
-    }
 
     return options;
 }

@@ -65,35 +65,47 @@ module.exports = function (sequelize) {
             image: null
         }, options);
 
-        const existing = await Category.findByName(input.name, options.parentId);
-        if (existing) {
-            return existing;
-        }
+        let category = await Category.findByName(input.name, options.parentId);
 
         const models = sequelize.models;
-        const category = await Category.create({
-            parent_id: options.parentId === null ? 0 : options.parentId,
-            image: !!options.image ? options.image : '',
-            top: options.parentId === null ? 1 : 0
-        });
 
-        await models.CategoryPath.createTree(category);
-        await models.CategoryDescription.create({
-            category_id: category.category_id,
-            name: input.name,
-            meta_title: input.name,
-        });
-        await models.CategoryToStore.create({category_id: category.category_id});
-        await models.CategoryToLayout.create({
-            category_id: category.category_id,
-            layout_id: options.layoutId || 0,
-        });
+        if (!category) {
+
+            category = await Category.create({
+                parent_id: options.parentId === null ? 0 : options.parentId,
+                image: !!options.image ? options.image : '',
+                top: options.parentId === null ? 1 : 0
+            });
+
+            await models.CategoryPath.createTree(category);
+            await models.CategoryDescription.create({
+                category_id: category.category_id,
+                name: input.name,
+                meta_title: input.name,
+            });
+            await models.CategoryToStore.create({category_id: category.category_id});
+            await models.CategoryToLayout.create({
+                category_id: category.category_id,
+                layout_id: options.layoutId || 0,
+            });
+        }
 
         if (options.urlAlias) {
-            await sequelize.models.UrlAlias.create({
-                query: `category_id=${category.category_id}`,
-                keyword: lodash.kebabCase(options.urlAlias.replace(/\//g,'')),
+
+            const [urlAlias, created] = await models.UrlAlias.findOrCreate({
+                where: {
+                    query: `category_id=${category.category_id}`
+                },
+                defaults: {
+                    keyword: lodash.kebabCase(options.urlAlias.replace(/\//g, '') + '-' + category.category_id)
+                }
             });
+
+            if(!created) {
+                await urlAlias.update({
+                    keyword: lodash.kebabCase(options.urlAlias.replace(/\//g,'')+'-'+category.category_id)
+                });
+            }
         }
 
         return category;

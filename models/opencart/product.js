@@ -215,7 +215,7 @@ module.exports = function (sequelize, DataTypes) {
                 defaults: defaults
             });
 
-            if(created) {
+            if(!created) {
                 await productToCategory.update(defaults);
             }
         });
