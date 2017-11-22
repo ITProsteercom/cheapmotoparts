@@ -152,7 +152,7 @@ async function parse() {
         async function processComponents(params) {
 
             let partshouseComponents = await getPartshouseComponents(params.url, params.cookies);
-            let partzillaComponents = await categoryController.getChildrenList(params.model.id, { diagram_url: {$ne: null}});
+            let partzillaComponents = await categoryController.getChildrenList(params.model.id, { diagram_url: {$eq: null}});
 
             await Promise.map(partzillaComponents, async (partzillaComponent) => {
 
