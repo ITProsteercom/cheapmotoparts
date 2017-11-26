@@ -134,89 +134,106 @@ module.exports = function (sequelize, DataTypes) {
     };
 
     Product.upsertFromParser = async function(input) {
-        let product = await Product.findBySku(input.sku);
 
-        if (product) {
-            await product.save(input);
-            return product;
-        }
+        return new Promise(async (resolve, reject) => {
 
-        product = await Product.create({
-            model: input.name,
-            sku: input.sku,
-            price: input.price,
-            status: !!input.price ? 1 : 0,
-            image: input.image,
-            quantity: input.quantity,
-            manufacturer_id: input.manufacturer_id
-        });
+            try {
 
-        try {
-            await sequelize.models.UrlAlias.create({
-                query: 'product_id=' + product.product_id,
-                keyword: lodash.kebabCase(`${input.name}-${input.sku}`),
-            });
-        } catch (e) {
-            // do nothing
-        }
+                let product = await Product.findBySku(input.sku);
 
-        await sequelize.query(`
-                    INSERT INTO product_description
-                    SET
-                        product_id = :productId,
-                        language_id = 2,
-                        name = :name,
-                        description = '',
-                        tag = '',
-                        meta_title = :metaTitle,
-                        meta_description = '', 
-                        meta_keyword = ''
-                `, {
-            replacements: {
-                productId: product.product_id,
-                name: input.name,
-                metaTitle: input.alias,
+                if (product) {
+                    await product.save(input);
+                    resolve(product);
+                }
+
+                product = await Product.create({
+                    model: input.name,
+                    sku: input.sku,
+                    price: input.price,
+                    status: !!input.price ? 1 : 0,
+                    image: input.image,
+                    quantity: input.quantity,
+                    manufacturer_id: input.manufacturer_id
+                });
+            
+                await sequelize.models.UrlAlias.create({
+                    query: 'product_id=' + product.product_id,
+                    keyword: lodash.kebabCase(`${input.name}-${input.sku}`),
+                });
+            
+                await sequelize.query(`
+                            INSERT INTO product_description
+                            SET
+                                product_id = :productId,
+                                language_id = 2,
+                                name = :name,
+                                description = '',
+                                tag = '',
+                                meta_title = :metaTitle,
+                                meta_description = '', 
+                                meta_keyword = ''
+                        `, {
+                    replacements: {
+                        productId: product.product_id,
+                        name: input.name,
+                        metaTitle: input.alias,
+                    }
+                });
+            
+                await sequelize.query(`
+                        INSERT INTO product_to_store
+                        SET
+                            product_id = :productId,
+                            store_id = '0'
+                    `, { replacements: { productId: product.product_id } });
+            
+                // FIXME: There is not unique constraint so we need to upsert manually
+                await sequelize.query(`
+                            INSERT INTO product_to_layout
+                            SET
+                                product_id = :productId,
+                                store_id = '0',
+                                layout_id = '0'
+                        `, { replacements: { productId: product.product_id } });
+
+
+                resolve(product);
+            }
+            catch(err) {
+                reject(err);
             }
         });
-
-        await sequelize.query(`
-                    INSERT INTO product_to_store
-                    SET
-                        product_id = :productId,
-                        store_id = '0'
-                `, { replacements: { productId: product.product_id } });
-
-        // FIXME: There is not unique constraint so we need to upsert manually
-        await sequelize.query(`
-                    INSERT INTO product_to_layout
-                    SET
-                        product_id = :productId,
-                        store_id = '0',
-                        layout_id = '0'
-                `, { replacements: { productId: product.product_id } });
-
-        return product;
     };
 
     Product.prototype.assignCategories = async function(categories) {
 
-        await categories.map(async category => {
+        return new Promise(async (resolve, reject) => {
 
-            let defaults = {
-                diagram_number: category.ProductToCategory.diagram_number,
-                required_qty: category.ProductToCategory.required_quantity
-            };
+            try {
+                await categories.map(async category => {
 
-            let [productToCategory, created] = await sequelize.models.ProductToCategory.findOrCreate({
-                where: {
-                    product_id: this.product_id,
-                    category_id: category.opencart_id
-                },
-                defaults: defaults
-            });
+                    let defaults = {
+                        diagram_number: category.ProductToCategory.diagram_number,
+                        required_qty: category.ProductToCategory.required_quantity
+                    };
 
-            if(!created) {
-                await productToCategory.update(defaults);
+                    let [productToCategory, created] = await sequelize.models.ProductToCategory.findOrCreate({
+                        where: {
+                            product_id: this.product_id,
+                            category_id: category.opencart_id
+                        },
+                        defaults: defaults
+                    });
+
+                    if(!created) {
+                        await productToCategory.update(defaults);
+                    }
+                });
+
+                resolve(true);
+            }
+            catch (err) {
+                reject(err);
             }
         });
     };
