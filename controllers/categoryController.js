@@ -108,6 +108,22 @@ async function getChildrenList(parent_id, filter = {}) {
     });
 }
 
+async function findAll(filter = {}, limit = 0, offset = 0) {
+
+    const options = {};
+
+    if(!!filter)
+        options.where = filter;
+
+    if(limit > 0)
+        options.limit = limit;
+
+    if(offset > 0)
+        options.offset = offset;
+
+    return await Category.findAll(options);
+}
+
 
 async function count(filter = {}) {
 
@@ -122,5 +138,6 @@ module.exports = {
     upsertAndReturnCategories,
     getMakeList,
     getChildrenList,
-    count
+    count,
+    findAll
 };
