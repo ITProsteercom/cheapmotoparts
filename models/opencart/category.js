@@ -91,14 +91,13 @@ module.exports = function (sequelize) {
         }
 
         if (options.urlAlias) {
+            let keyword = lodash.kebabCase(options.urlAlias.replace(/\//g, ''));
+            if (!!category.parent_id)
+                keyword += '-' + category.category_id;
 
             const [urlAlias, created] = await models.UrlAlias.findOrCreate({
-                where: {
-                    query: `category_id=${category.category_id}`
-                },
-                defaults: {
-                    keyword: lodash.kebabCase(options.urlAlias.replace(/\//g, '') + '-' + category.category_id)
-                }
+                where: { query: `category_id=${category.category_id}` },
+                defaults: { keyword: keyword }
             });
 
             if(!created) {
