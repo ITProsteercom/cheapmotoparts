@@ -157,7 +157,7 @@ async function parse() {
             await Promise.map(partzillaComponents, async (partzillaComponent) => {
 
                 let partshouseComponent = partshouseComponents.find((partshouseComponent) => {
-                    return partshouseComponent.name == partzillaComponent.name;
+                    return partshouseComponent.name.toLowerCase() == partzillaComponent.name.toLowerCase();
                 });
 
                 if (typeof partshouseComponent !== 'undefined') {
