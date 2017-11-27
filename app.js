@@ -27,10 +27,12 @@ async function run() {
         if (parser_steps.includes('parse')) {
             await parseController.load('/catalog');
         }
-        else if(parser_steps.includes('diagram')) {
+
+        if(parser_steps.includes('diagram')) {
             await diagramController.parse();
         }
-        else if(parser_steps.includes('import')) {
+
+        if(parser_steps.includes('import')) {
             await importController.run(import_steps);
         }
     }

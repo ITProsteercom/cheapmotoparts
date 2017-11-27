@@ -39,13 +39,16 @@ async function sync(import_steps) {
     if(import_steps.includes('category')) {
         await syncCategory();
     }
-    else if(import_steps.includes('diagram')) {
+
+    if(import_steps.includes('diagram')) {
         await syncDiagrams();
     }
-    else if(import_steps.includes('make')) {
+
+    if(import_steps.includes('make')) {
         await syncManufacturers();
     }
-    else if(import_steps.includes('product')) {
+
+    if(import_steps.includes('product')) {
         await syncProducts();
     }
 }
