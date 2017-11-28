@@ -8,6 +8,7 @@ const Promise = require("bluebird");
 const path = require('path');
 const childProcess = require('child_process');
 const stringSimilarity = require('string-similarity');
+const fs = require('fs');
 
 const db = require('../models/database').parser;
 
@@ -24,14 +25,21 @@ const MATCH_PERSENTAGE = 80;
 //parse();
 
 var q;
+var componentsToUpdate = [];
 
 async function parse() {
 
     log.i('Parsing diagrams from partshouse started');
 
+    //clear logs
+    if(fs.existsSync('./tmp/model-errors.log'))
+            fs.unlinkSync('./tmp/model-errors.log');
+
+    if(fs.existsSync('./tmp/component-errors.log'))
+        fs.unlinkSync('./tmp/component-errors.log');
+
     return new Promise(async (resolve, reject) => {
 
-        var componentsToUpdate = [];
         q = tress(queryParsingCallback, PARALLEL_STREAMS);// 5 parallel streams
 
         q.retry = function () {
@@ -123,6 +131,9 @@ async function processYears(params) {
 }
 
 async function processModels(params) {
+
+    const modelLog = fs.createWriteStream('./tmp/model-errors.log');
+
     let partshouseModels = await getPartshouseModels(params.url, params.cookies);
     let partzillaModels = await categoryController.getChildrenList(params.year.id);
 
@@ -137,6 +148,7 @@ async function processModels(params) {
         //if match was not found
         if(index < 0) {
             //TODO: Write to log
+            modelLog.write(JSON.stringify(partzillaModel) + '\n');
         }
         //if match was found
         else {
@@ -157,9 +169,13 @@ async function processModels(params) {
             partshouseModels.slice(index, 1);
         }
     });
+
+    modelLog.close();
 }
 
 async function processComponents(params) {
+
+    const diagramLog = fs.createWriteStream('./tmp/component-errors.log');
 
     let partshouseComponents = await getPartshouseComponents(params.url, params.cookies);
     let partzillaComponents = await categoryController.getChildrenList(params.model.id, { diagram_url: {$eq: null}});
@@ -175,16 +191,15 @@ async function processComponents(params) {
         //if match was not found
         if(index < 0) {
             //TODO: Write to log
+            diagramLog.write(JSON.stringify(partzillaComponent) + ' \n');
         }
         //if match was found
         else {
-            console.log(partzillaComponent.name);
             let partshouseComponent = partshouseComponents[index];
-            console.log(partshouseComponent);
-            console.log('---------------------------------');
 
             debug('add ' + getPartshouseUrl([params.make.name]) + partshouseComponent.url + ' to query');
             log.step(0, 1);
+
             q.push({
                 step: 'diagram',
                 url: getPartshouseUrl([params.make.name]) + partshouseComponent.url,
@@ -199,6 +214,8 @@ async function processComponents(params) {
             partshouseComponents.slice(index, 1);
         }
     });
+
+    diagramLog.close();
 }
 
 async function processDiagram(params) {
