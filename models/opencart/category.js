@@ -102,7 +102,7 @@ module.exports = function (sequelize) {
 
             if(!created) {
                 await urlAlias.update({
-                    keyword: lodash.kebabCase(options.urlAlias.replace(/\//g,'')+'-'+category.category_id)
+                    keyword: keyword
                 });
             }
         }
