@@ -34,6 +34,7 @@
     "progress": "^2.0.0",
     "request": "^2.83.0",
     "sequelize": "^4.22.6",
+    "string-similarity": "^1.2.0",
     "tress": "^1.0.5",
     "yargs": "^10.0.3"
   }

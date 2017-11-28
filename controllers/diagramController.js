@@ -7,6 +7,7 @@ const tress = require('tress');
 const Promise = require("bluebird");
 const path = require('path');
 const childProcess = require('child_process');
+const stringSimilarity = require('string-similarity');
 
 const db = require('../models/database').parser;
 
@@ -14,13 +15,15 @@ const authController = require('./authController');
 const categoryController = require('./categoryController');
 const { fileExists, getRandomInRange } = require('./utils');
 
-const { intersect } = require('./utils');
-
 const PARALLEL_STREAMS = +ENV.PARALLEL_STREAMS || 10;
 const TIME_WAITING = +ENV.TIME_WAITING || 300000; //default 5 minutes
 const ocImagesPath = ENV.OC_IMAGES_PATH || '/var/www/html/image/';
+const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
+const MATCH_PERSENTAGE = 80;
 
 //parse();
+
+var q;
 
 async function parse() {
 
@@ -29,7 +32,7 @@ async function parse() {
     return new Promise(async (resolve, reject) => {
 
         var componentsToUpdate = [];
-        var q = tress(queryParsingCallback, PARALLEL_STREAMS);// 5 parallel streams
+        q = tress(queryParsingCallback, PARALLEL_STREAMS);// 5 parallel streams
 
         q.retry = function () {
             q.pause();
@@ -43,6 +46,7 @@ async function parse() {
 
         q.drain = async function () {
 
+            //update categories left after process
             if (componentsToUpdate.length) {
                 await categoryController.updateCategories(componentsToUpdate);
             }
@@ -57,9 +61,8 @@ async function parse() {
 
         q.success = async function () {
 
-            let limit = 1000;
-
-            if (componentsToUpdate.length >= limit) {
+            //update categories if count more than MAX_OPEN_DB_CONNECTIONS
+            if (componentsToUpdate.length >= MAX_OPEN_DB_CONNECTIONS) {
                 await categoryController.updateCategories(componentsToUpdate);
                 componentsToUpdate = [];
             }
@@ -69,259 +72,337 @@ async function parse() {
         log.start('Обработано моделей %s, Обработано компонентов %s, Обработано диаграмм %s.');
 
         await parseDiagrams();
+    });
+}
 
-        async function queryParsingCallback(params, callback) {
-            try {
-                if (params.step == 'models') {
-                    await processModels(params);
-                    return callback();
-                }
-                else if (params.step == 'components') {
-                    await processComponents(params)
-                    return callback();
-                }
-                else if (params.step == 'diagram') {
+async function queryParsingCallback(params, callback) {
+    try {
+        if (params.step == 'models') {
+            await processModels(params);
+            return callback();
+        }
+        else if (params.step == 'components') {
+            await processComponents(params)
+            return callback();
+        }
+        else if (params.step == 'diagram') {
 
-                    await processDiagram(params);
-                    return callback();
-                }
-
-            } catch (e) {
-                log.e(e.message);
-                return callback(true);
-            }
+            await processDiagram(params);
+            return callback();
         }
 
-        async function processYears(params) {
-            //get categories of current manufacturer
-            let categories = await categoryController.getChildrenList(params.make.id);
+    } catch (e) {
+        log.e(e.message);
+        return callback(true);
+    }
+}
 
-            await Promise.map(categories, async (category) => {
+async function processYears(params) {
+    //get categories of current manufacturer
+    let categories = await categoryController.getChildrenList(params.make.id);
 
-                //get years of current category
-                let years = await categoryController.getChildrenList(category.id);
+    await Promise.map(categories, async (category) => {
 
-                await Promise.map(years, async (year) => {
+        //get years of current category
+        let years = await categoryController.getChildrenList(category.id);
 
-                    debug('add ' + getPartshouseUrl([params.make.name, category.name, year.name]) + ' to query');
+        await Promise.map(years, async (year) => {
 
-                    q.push({
-                        step: 'models',
-                        url: getPartshouseUrl([params.make.name, category.name, year.name]),
-                        cookies: params.cookies,
-                        make: params.make,
-                        cat: category,
-                        year: year
-                    });
-                });
+            debug('add ' + getPartshouseUrl([params.make.name, category.name, year.name]) + ' to query');
+
+            q.push({
+                step: 'models',
+                url: getPartshouseUrl([params.make.name, category.name, year.name]),
+                cookies: params.cookies,
+                make: params.make,
+                cat: category,
+                year: year
             });
+        });
+    });
+}
+
+async function processModels(params) {
+    let partshouseModels = await getPartshouseModels(params.url, params.cookies);
+    let partzillaModels = await categoryController.getChildrenList(params.year.id);
+
+    //sort by name length for next comparison
+    partzillaModels.sort(sortDescByNameLength);
+
+    await Promise.map(partzillaModels, async (partzillaModel) => {
+
+        //search intersection and return index of best match
+        let index = findSimilarInParthouse(partzillaModel.name, partshouseModels);
+
+        //if match was not found
+        if(index < 0) {
+            //TODO: Write to log
         }
+        //if match was found
+        else {
+            let partshouseModel = partshouseModels[index];
 
-        async function processModels(params) {
-            let partshouseModels = await getPartshouseModels(params.url, params.cookies);
-            let partzillaModels = await categoryController.getChildrenList(params.year.id);
-
-            //let models = [];
-            await Promise.map(partzillaModels, async (partzillaModel) => {
-
-                let partshouseModel = partshouseModels.find((partshouseModel) => {
-                    let parthouseName = prepareModelName(partshouseModel.name);
-                    let partzillaName = prepareModelName(partzillaModel.name);
-
-                    //check if partshouse name contains partzilla name
-                    return intersect(parthouseName, partzillaName).length;
-                });
-
-                if (typeof partshouseModel !== 'undefined') {
-
-                    debug('add ' + getPartshouseUrl([params.make.name]) + partshouseModel.url + ' to query');
-                    log.step(1);
-                    q.push({
-                        step: 'components',
-                        url: getPartshouseUrl([params.make.name]) + partshouseModel.url,
-                        cookies: params.cookies,
-                        make: params.make,
-                        year: params.year,
-                        model: partzillaModel
-                    });
-                }
-            });
-        }
-
-
-        async function processComponents(params) {
-
-            let partshouseComponents = await getPartshouseComponents(params.url, params.cookies);
-            let partzillaComponents = await categoryController.getChildrenList(params.model.id, { diagram_url: {$eq: null}});
-
-            await Promise.map(partzillaComponents, async (partzillaComponent) => {
-
-                let partshouseComponent = partshouseComponents.find((partshouseComponent) => {
-                    return prepareComponentName(partshouseComponent.name) == prepareComponentName(partzillaComponent.name);
-                });
-
-                if (typeof partshouseComponent !== 'undefined') {
-
-                    debug('add ' + getPartshouseUrl([params.make.name]) + partshouseComponent.url + ' to query');
-                    log.step(0, 1);
-                    q.push({
-                        step: 'diagram',
-                        url: getPartshouseUrl([params.make.name]) + partshouseComponent.url,
-                        cookies: params.cookies,
-                        make: params.make,
-                        year: params.year,
-                        model: params.model,
-                        component: partzillaComponent
-                    });
-                }
-            });
-        }
-
-
-        async function processDiagram(params) {
-
-            let component = params.component.dataValues;
-            debug('parse diagram for ' + params.make.name + ' ' + params.model.name + ' ' + params.component.name);
-            component.diagram_url = await parseDiagramUrl(params.url, params.cookies);
-            componentsToUpdate.push(component);
-            log.step(0, 0, 1);
-        }
-
-
-        async function parseDiagrams() {
-
-            //get list of Manufacturers
-            let manufacturers = await categoryController.getMakeList();
-
-            await Promise.map(manufacturers, async (manufacturer) => {
-
-                try {
-                    //get cookies for {manufacturer}partshouse.com site or throw Error if not found
-                    const cookies = await authController.getCookiesPartshouse(manufacturer.name);
-
-                    //process manufacturer's year section
-                    await processYears({
-                        cookies: cookies,
-                        make: manufacturer
-                    });
-                }
-                catch (e) {
-                    log.w(e);
-                }
-            });
-        }
-
-
-        function getPartshouseUrl(path = []) {
-
-            if (path.length == 0)
-                return;
-
-            //prepare url path section chain from names
-            let preparedPath = path.map((pathSection) => {
-                return pathSection
-                    .replace('-', '')
-                    .replace(/\s+/g, '')
-                    .toLowerCase();
+            debug('add ' + getPartshouseUrl([params.make.name]) + partshouseModel.url + ' to query');
+            log.step(1);
+            q.push({
+                step: 'components',
+                url: getPartshouseUrl([params.make.name]) + partshouseModel.url,
+                cookies: params.cookies,
+                make: params.make,
+                year: params.year,
+                model: partzillaModel
             });
 
-            if (path.length == 1)
-                return 'https://www.' + preparedPath[0] + 'partshouse.com';
-            else
-                return 'https://www.' + preparedPath[0] + 'partshouse.com/oemparts/c/' + preparedPath.join('_') + '/parts';
-        }
-
-
-        async function getPartshouseModels(url, cookies) {
-
-            return new Promise((resolve, reject) => {
-
-                needle.get(url, {cookies: cookies}, async (err, res) => {
-                    if (err) return reject(err);
-
-                    return resolve(await parseModels(res.body));
-                });
-            });
-        }
-
-        async function getPartshouseComponents(url, cookies) {
-
-            return new Promise((resolve, reject) => {
-
-                needle.get(url, {cookies: cookies}, async (err, res) => {
-                    if (err) return reject(err);
-
-                    return resolve(await parseComponents(res.body));
-                });
-            });
-        }
-
-        async function parseComponents(html_page) {
-            const $ = await cheerio.load(html_page);
-
-            const components = [];
-
-            $('#partassemthumblist .passemname a').each((i, el) => {
-                components.push({
-                    name: $(el).text(),
-                    url: $(el).attr('href')
-                });
-            });
-
-            return components;
-        }
-
-        async function parseModels(html_page) {
-
-            const $ = await cheerio.load(html_page);
-
-            const models = [];
-
-            $('ul.partsubselect li a').each((i, el) => {
-
-                models.push({
-                    name: $(el).text(),
-                    url: $(el).attr('href')
-                });
-            });
-
-            return models;
-        }
-
-        async function parseDiagramUrl(url, cookies) {
-
-            return new Promise((resolve, reject) => {
-
-                needle.get(url, {cookies: cookies}, (err, res) => {
-
-                    if (err)
-                        return reject(err);
-
-                    let diagramUrl = null;
-
-                    if(!!res.body.match(/assempath\s=\s*'(\S*)'/))
-                        diagramUrl = res.body.match(/assempath\s=\s*'(\S*)'/)[1];
-
-                    if (diagramUrl == 'noimg/assembly.xml')
-                        diagramUrl = null;
-
-                    return resolve(diagramUrl);
-                });
-            });
-        }
-
-        function prepareComponentName(name) {
-            return name.replace(/[\s,\/,+,-]/g, '')
-                        .toLowerCase();
-        }
-
-        function prepareModelName(name) {
-            return name.replace(' (', ' - ')
-                .replace(')', '')
-                .toLowerCase()
-                .split(' - ');
+            //remove from source array to exlude further same match found
+            partshouseModels.slice(index, 1);
         }
     });
+}
+
+async function processComponents(params) {
+
+    let partshouseComponents = await getPartshouseComponents(params.url, params.cookies);
+    let partzillaComponents = await categoryController.getChildrenList(params.model.id, { diagram_url: {$eq: null}});
+
+    //sort by name length for next comparison
+    partzillaComponents.sort(sortDescByNameLength);
+
+    await Promise.map(partzillaComponents, async (partzillaComponent) => {
+
+        //search intersection and return index of best match
+        let index = findSimilarInParthouse(partzillaComponent.name, partshouseComponents);
+
+        //if match was not found
+        if(index < 0) {
+            //TODO: Write to log
+        }
+        //if match was found
+        else {
+            console.log(partzillaComponent.name);
+            let partshouseComponent = partshouseComponents[index];
+            console.log(partshouseComponent);
+            console.log('---------------------------------');
+
+            debug('add ' + getPartshouseUrl([params.make.name]) + partshouseComponent.url + ' to query');
+            log.step(0, 1);
+            q.push({
+                step: 'diagram',
+                url: getPartshouseUrl([params.make.name]) + partshouseComponent.url,
+                cookies: params.cookies,
+                make: params.make,
+                year: params.year,
+                model: params.model,
+                component: partzillaComponent
+            });
+
+            //remove from source array to exlude further same match found
+            partshouseComponents.slice(index, 1);
+        }
+    });
+}
+
+async function processDiagram(params) {
+
+    let component = params.component.dataValues;
+    debug('parse diagram for ' + params.make.name + ' ' + params.model.name + ' ' + params.component.name);
+    component.diagram_url = await parseDiagramUrl(params.url, params.cookies);
+    componentsToUpdate.push(component);
+    log.step(0, 0, 1);
+}
+
+async function parseDiagrams() {
+
+    //get list of Manufacturers
+    let manufacturers = await categoryController.getMakeList();
+
+    await Promise.map(manufacturers, async (manufacturer) => {
+
+        try {
+            //get cookies for {manufacturer}partshouse.com site or throw Error if not found
+            const cookies = await authController.getCookiesPartshouse(manufacturer.name);
+
+            //process manufacturer's year section
+            await processYears({
+                cookies: cookies,
+                make: manufacturer
+            });
+        }
+        catch (e) {
+            log.w(e);
+        }
+    });
+}
+
+function getPartshouseUrl(path = []) {
+
+    if (path.length == 0)
+        return;
+
+    //prepare url path section chain from names
+    let preparedPath = path.map((pathSection) => {
+        return pathSection
+            .replace('-', '')
+            .replace(/\s+/g, '')
+            .toLowerCase();
+    });
+
+    if (path.length == 1)
+        return 'https://www.' + preparedPath[0] + 'partshouse.com';
+    else
+        return 'https://www.' + preparedPath[0] + 'partshouse.com/oemparts/c/' + preparedPath.join('_') + '/parts';
+}
+
+async function getPartshouseModels(url, cookies) {
+
+    return new Promise((resolve, reject) => {
+
+        needle.get(url, {cookies: cookies}, async (err, res) => {
+            if (err) return reject(err);
+
+            return resolve(await parseModels(res.body));
+        });
+    });
+}
+
+async function getPartshouseComponents(url, cookies) {
+
+    return new Promise((resolve, reject) => {
+
+        needle.get(url, {cookies: cookies}, async (err, res) => {
+            if (err) return reject(err);
+
+            return resolve(await parseComponents(res.body));
+        });
+    });
+}
+
+async function parseComponents(html_page) {
+    const $ = await cheerio.load(html_page);
+
+    const components = [];
+
+    $('#partassemthumblist .passemname a').each((i, el) => {
+        components.push({
+            name: $(el).text(),
+            url: $(el).attr('href')
+        });
+    });
+
+    //sort by name length for further correct comparison of partzilla names
+    components.sort(sortDescByNameLength);
+
+    return components;
+}
+
+async function parseModels(html_page) {
+
+    const $ = await cheerio.load(html_page);
+
+    const models = [];
+
+    $('ul.partsubselect li a').each((i, el) => {
+
+        models.push({
+            name: $(el).text(),
+            url: $(el).attr('href')
+        });
+    });
+
+    return models;
+}
+
+async function parseDiagramUrl(url, cookies) {
+
+    return new Promise((resolve, reject) => {
+
+        needle.get(url, {cookies: cookies}, (err, res) => {
+
+            if (err)
+                return reject(err);
+
+            let diagramUrl = null;
+
+            if(!!res.body.match(/assempath\s=\s*'(\S*)'/))
+                diagramUrl = res.body.match(/assempath\s=\s*'(\S*)'/)[1];
+
+            if (diagramUrl == 'noimg/assembly.xml')
+                diagramUrl = null;
+
+            return resolve(diagramUrl);
+        });
+    });
+}
+
+/**
+ * Remove all non-digit and non-letter symbols from name and convert to lower case
+ *
+ * @param name
+ * @returns {string}
+ */
+function prepareSectionName(name) {
+
+    return name.replace(/\W/g, '')
+        .toLowerCase();
+}
+
+/**
+ * Callback sorting objects by name length
+ *
+ * @param a
+ * @param b
+ * @returns {number}
+ */
+function sortDescByNameLength(a,b) {
+
+    let aName = prepareSectionName(a.name);
+    let bName = prepareSectionName(b.name);
+
+    if (aName.length > bName.length)
+        return -1;
+    if (aName.length < bName.length)
+        return 1;
+
+    return 0;
+}
+
+/**
+ * Find index of best match of partzilla section in partshouse section list
+ * Return index or -1 if does not find
+ *
+ * @param partzillaSectionName
+ * @param partshouseSectionList
+ * @returns {*|number}
+ */
+function findSimilarInParthouse(partzillaSectionName, partshouseSectionList) {
+
+    partzillaSectionName = prepareSectionName(partzillaSectionName);
+
+    return partshouseSectionList.findIndex((partshouseSection) => {
+        let partshouseSectionName = prepareSectionName(partshouseSection.name);
+
+        return intersect(partzillaSectionName, partshouseSectionName);
+    });
+}
+
+/**
+ * Check if input names intersect each other
+ *
+ * @param partzillaName
+ * @param partshouseName
+ * @returns {boolean}
+ */
+function intersect(partzillaName, partshouseName) {
+
+    switch (true) {
+        case(partzillaName == partshouseName):
+        case(partzillaName.indexOf(partshouseName) != -1):
+        case(partshouseName.indexOf(partzillaName) != -1):
+        case(stringSimilarity.compareTwoStrings(partzillaName, partshouseName) > MATCH_PERSENTAGE/100):
+            return true;
+        break;
+    }
+
+    return false;
 }
 
 async function loadDiagram(Category) {
@@ -389,7 +470,6 @@ function getImageName(diagram_url) {
 
     return path.join('catalog/diagrams/', filename);
 }
-
 
 module.exports = {
     parse,
