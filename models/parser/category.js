@@ -53,7 +53,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Category.upsertBulkAndReturn = async function (arCategories, parent_id) {
 
-    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'diagram_url', 'opencart_id', 'sync']});
+    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url']});
 
     return Category.findAll({
         where: {parent_id: parent_id}
