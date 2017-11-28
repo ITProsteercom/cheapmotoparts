@@ -157,7 +157,7 @@ async function parse() {
             await Promise.map(partzillaComponents, async (partzillaComponent) => {
 
                 let partshouseComponent = partshouseComponents.find((partshouseComponent) => {
-                    return partshouseComponent.name.toLowerCase() == partzillaComponent.name.toLowerCase();
+                    return prepareComponentName(partshouseComponent.name) == prepareComponentName(partzillaComponent.name);
                 });
 
                 if (typeof partshouseComponent !== 'undefined') {
@@ -308,6 +308,11 @@ async function parse() {
                     return resolve(diagramUrl);
                 });
             });
+        }
+
+        function prepareComponentName(name) {
+            return name.replace(/[\s,\/,+,-]/g, '')
+                        .toLowerCase();
         }
 
         function prepareModelName(name) {
