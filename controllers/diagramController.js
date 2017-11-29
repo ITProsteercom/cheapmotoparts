@@ -18,9 +18,10 @@ const categoryController = require('./categoryController');
 const { fileExists, getRandomInRange } = require('./utils');
 
 const PARALLEL_STREAMS = +ENV.PARALLEL_STREAMS || 10;
-const TIME_WAITING = +ENV.TIME_WAITING || 300000; //default 5 minutes
-const ocImagesPath = ENV.OC_IMAGES_PATH || '/var/www/html/image/';
 const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
+const TIME_WAITING = +ENV.TIME_WAITING || 300000; //default 5 minutes
+
+const ocImagesPath = ENV.OC_IMAGES_PATH || '/var/www/html/image/';
 const MATCH_PERSENTAGE = 80;
 
 var q;
@@ -425,24 +426,48 @@ function intersect(partzillaName, partshouseName) {
     return false;
 }
 
+/**
+ * find intersection in complicated cases
+ * for example 'HAYABUSA - GSX1300RAL7' and 'GSX1300R-A'
+ *
+ * @param leftName
+ * @param rightName
+ * @returns {boolean}
+ */
 function defaultIntersect(leftName, rightName) {
 
+    //prepare names and make arrays
     let leftNameSplited = prepareSectionName(leftName).split(' ');
     let rightNameSplited = prepareSectionName(rightName).split(' ');
 
-    let intersect = intersection(leftNameSplited, rightNameSplited);
+    //find intersection of left name parts in right name
+    let leftIntersect = leftNameSplited.filter((leftPart) => {
+        let lf = rightNameSplited.filter((rightPart) => {
+            return rightPart.indexOf(leftPart) >= 0;
+        });
 
-    if (intersect.length == leftNameSplited.length || intersect.length == rightNameSplited.length)
+        return lf.length > 0;
+    });
+
+    // find intersection of right name parts in left name
+    let rightIntersect = rightNameSplited.filter((rightPart) => {
+        let rt =  leftNameSplited.filter((leftPart) => {
+            return leftPart.indexOf(rightPart) >= 0;
+        });
+
+        return rt.length > 0;
+    });
+
+    // get min length of name parts array
+    let minlength = [leftNameSplited, rightNameSplited].reduce((prev, curr) => {
+        return prev.length > curr.length ? curr.length : prev.length;
+    });
+
+    // check if intersect by at list minimum cases
+    if(leftIntersect.length >= minlength || rightIntersect.length >= minlength)
         return true;
 
     return false;
-    /*let leftIntersect = leftNameSplited.filter((leftPart) => {
-        return rightNameSplited.indexOf(leftPart) >= 0;
-    });
-
-    let rightIntersect = rightNameSplited.filter((rightName) => {
-        return leftNameSplited.indexOf(rightName) >= 0;
-    });*/
 }
 
 async function loadDiagram(Category) {
