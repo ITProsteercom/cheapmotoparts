@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./app.js --make default --cat default --year default",
-    "demo": "node ./app.js --make Honda --cat Motorcycle --year 2017,2017",
+    "demo": "node ./app.js --make Suzuki --cat Motorcycle --year 2017,2017",
     "parse": "node ./app.js --steps parse",
     "diagram": "node ./app.js --steps diagram",
     "import": "node ./app.js --steps import",
@@ -20,6 +20,7 @@
     "sequelize-cli": "^3.0.0"
   },
   "dependencies": {
+    "array-intersection": "^0.1.2",
     "bluebird": "^3.5.1",
     "cheerio": "^1.0.0-rc.2",
     "child_process": "^1.0.2",

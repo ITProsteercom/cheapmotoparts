@@ -7,6 +7,7 @@ const tress = require('tress');
 const Promise = require("bluebird");
 const path = require('path');
 const childProcess = require('child_process');
+const intersection = require('array-intersection');
 const stringSimilarity = require('string-similarity');
 const fs = require('fs');
 
@@ -21,8 +22,6 @@ const TIME_WAITING = +ENV.TIME_WAITING || 300000; //default 5 minutes
 const ocImagesPath = ENV.OC_IMAGES_PATH || '/var/www/html/image/';
 const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
 const MATCH_PERSENTAGE = 80;
-
-//parse();
 
 var q;
 var componentsToUpdate = [];
@@ -358,7 +357,8 @@ async function parseDiagramUrl(url, cookies) {
  */
 function prepareSectionName(name) {
 
-    return name.replace(/\W/g, '')
+    return name.replace(/\W/g, ' ')
+        .replace(/\s+/g, ' ')
         .toLowerCase();
 }
 
@@ -369,10 +369,10 @@ function prepareSectionName(name) {
  * @param b
  * @returns {number}
  */
-function sortDescByNameLength(a,b) {
+function sortDescByNameLength(aName, bName) {
 
-    let aName = prepareSectionName(a.name);
-    let bName = prepareSectionName(b.name);
+    // let aName = prepareSectionName(a.name);
+    // let bName = prepareSectionName(b.name);
 
     if (aName.length > bName.length)
         return -1;
@@ -415,11 +415,34 @@ function intersect(partzillaName, partshouseName) {
         case(partzillaName.indexOf(partshouseName) != -1):
         case(partshouseName.indexOf(partzillaName) != -1):
         case(stringSimilarity.compareTwoStrings(partzillaName, partshouseName) > MATCH_PERSENTAGE/100):
-            return true;
-        break;
+                return true;
+            break;
+        default:
+                return defaultIntersect(partzillaName, partshouseName);
+            break;
     }
 
     return false;
+}
+
+function defaultIntersect(leftName, rightName) {
+
+    let leftNameSplited = prepareSectionName(leftName).split(' ');
+    let rightNameSplited = prepareSectionName(rightName).split(' ');
+
+    let intersect = intersection(leftNameSplited, rightNameSplited);
+
+    if (intersect.length == leftNameSplited.length || intersect.length == rightNameSplited.length)
+        return true;
+
+    return false;
+    /*let leftIntersect = leftNameSplited.filter((leftPart) => {
+        return rightNameSplited.indexOf(leftPart) >= 0;
+    });
+
+    let rightIntersect = rightNameSplited.filter((rightName) => {
+        return leftNameSplited.indexOf(rightName) >= 0;
+    });*/
 }
 
 async function loadDiagram(Category) {
