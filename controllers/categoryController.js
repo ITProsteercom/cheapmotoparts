@@ -1,6 +1,7 @@
 const cheerio = require('cheerio');
 const debug = require('debug')('controller:category');
 
+var appConfig = require('./configController');
 const Category = require('../models/database').parser.Category;
 
 //depth level - category name
@@ -42,14 +43,13 @@ async function updateCategories(categories) {
     return await Category.upsertBulk(categories);
 }
 
-
 function filterCategories(categoryList) {
 
     if(categoryList.length == 0)
         return [];
 
     let category_type = categoryChain[getDepthLevel(categoryList[0].url)];
-    let filterUrl = global.appConfig[category_type];
+    let filterUrl = appConfig.get(category_type);
 
     if(typeof filterUrl === 'undefined' || filterUrl == null)
         return categoryList;
@@ -63,7 +63,6 @@ function filterCategories(categoryList) {
         return filterUrl.includes(category.name);
     });
 }
-
 
 async function parseCategoties(html_page, parent_id) {
 
@@ -91,7 +90,12 @@ function getDepthLevel(url) {
     return url.slice(1).split('/').length - 1;
 }
 
-
+/**
+ * get list of manufacturers
+ *
+ * @param filter
+ * @returns {*|Promise.<Array.<Model>>}
+ */
 async function getMakeList(filter = {}) {
 
     filter.depth_level = 1;
@@ -123,7 +127,6 @@ async function findAll(filter = {}, limit = 0, offset = 0) {
 
     return await Category.findAll(options);
 }
-
 
 async function count(filter = {}) {
 

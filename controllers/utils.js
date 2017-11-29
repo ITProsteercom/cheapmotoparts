@@ -3,41 +3,6 @@ const ProgressBar = require('progress');
 const Promise = require('bluebird');
 const fs = require('fs');
 
-function setAppConfig(arConfig, argv) {
-    let appConfig = {};
-
-    arConfig.forEach(function(config) {
-        appConfig[config] = setConfig(argv[config], default_config[config]);
-    });
-
-    return appConfig;
-}
-
-function setConfig(configValue, defaultList) {
-
-    if(typeof configValue === 'undefined' || configValue.length == 0)
-        return null;
-
-    if(configValue == 'default')
-        return defaultList;
-
-    if(String(configValue).split(',').length)
-        return String(configValue).split(',');
-
-    return formatTitleCase(configValue);
-}
-
-function formatTitleCase(str) {
-
-    return str
-        .toString()
-        .toLowerCase()
-        .split(',')
-        .map(function(word) {
-            return word[0].toUpperCase() + word.substr(1);
-        });
-}
-
 function createProgressBar(string, total) {
 
     return new ProgressBar(
@@ -74,7 +39,6 @@ function getRandomInRange(min, max) {
 
 
 module.exports = {
-    setAppConfig,
     createProgressBar,
     fileExists,
     getRandomInRange

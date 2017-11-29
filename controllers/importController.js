@@ -11,17 +11,19 @@ const categoryController = require('./categoryController');
 const diagramController = require('./diagramController');
 const { createProgressBar } = require('./utils');
 
+var appConfig = require('./configController');
+
 const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
 const MAX_DIAGRAM_REQUESTS = +ENV.MAX_DIAGRAM_REQUESTS || 20;
 
 
-async function run(import_steps = ['category', 'diagram', 'make', 'product']) {
+async function run() {
 
     log.i('Importing data to opencart started');
 
     return new Promise(async (resolve, reject) => {
 
-        await sync(import_steps)
+        await sync()
             .then(() => {
                 psDatabase.sequelize.close();
                 ocDatabase.sequelize.close();
@@ -34,26 +36,26 @@ async function run(import_steps = ['category', 'diagram', 'make', 'product']) {
     });
 }
 
-async function sync(import_steps) {
+async function sync() {
 
-    if(import_steps.includes('category')) {
-        await syncCategory();
+    if(appConfig.get('sync').includes('category')) {
+        await syncCategories();
     }
 
-    if(import_steps.includes('diagram')) {
+    if(appConfig.get('sync').includes('diagrams')) {
         await syncDiagrams();
     }
 
-    if(import_steps.includes('make')) {
+    if(appConfig.get('sync').includes('make')) {
         await syncManufacturers();
     }
 
-    if(import_steps.includes('product')) {
+    if(appConfig.get('sync').includes('products')) {
         await syncProducts();
     }
 }
 
-async function syncCategory() {
+async function syncCategories() {
 
     let categoryTotal = await categoryController.count();
     global.progress = createProgressBar('synchronizing categories', categoryTotal);

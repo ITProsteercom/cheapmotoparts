@@ -11,8 +11,6 @@ const intersection = require('array-intersection');
 const stringSimilarity = require('string-similarity');
 const fs = require('fs');
 
-const db = require('../models/database').parser;
-
 const authController = require('./authController');
 const categoryController = require('./categoryController');
 const { fileExists, getRandomInRange } = require('./utils');
@@ -61,8 +59,6 @@ async function parse() {
 
             log.finish();
             log.i('...completed!');
-
-            db.sequelize.close();
 
             resolve(true);
         };

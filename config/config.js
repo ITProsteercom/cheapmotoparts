@@ -27,6 +27,9 @@ module.exports = {
     "password": "1234567891"
   },
   "default": {
+    "steps": ["parse", "diagram", "import"],
+    "parse": ["category", "products"],
+    "sync": ["category", "diagrams", "make", "products"],
     "make": ["Honda", "Kawasaki", "Suzuki", "Yamaha"],
     "cat": ["Motorcycle"],
     "year": [1988, 2018]

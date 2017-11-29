@@ -14,6 +14,8 @@ const categoryController = require('./categoryController');
 const productController = require('./productController');
 const productToCategoryController = require('./productToCategoryController');
 
+var appConfig = require('./configController');
+
 const PARALLEL_STREAMS = +ENV.PARALLEL_STREAMS || 10;
 const TIME_WAITING = +ENV.TIME_WAITING || 300000; //default 5 minutes
 const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
@@ -27,9 +29,13 @@ async function load() {
 
     cookiePartzilla = await getCookiePartzilla();
 
-    await loadCategories();
+    if(appConfig.get('parse').includes('category')) {
+        await loadCategories();
+    }
 
-    await loadProducts();
+    if(appConfig.get('parse').includes('products')) {
+        await loadProducts();
+    }
 
     log.i('...complited!');
 }
