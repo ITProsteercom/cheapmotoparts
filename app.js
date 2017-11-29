@@ -22,8 +22,6 @@ async function run() {
     //set app configs
     appConfig.set(argv);
 
-    console.log(appConfig.get('steps'));
-
     try {
         if (appConfig.get('steps').includes('parse')) {
             await parseController.load('/catalog');
@@ -41,6 +39,5 @@ async function run() {
         log.w(e);
     }
 
-    console.log("CLOSE?");
     db.sequelize.close();
 }
