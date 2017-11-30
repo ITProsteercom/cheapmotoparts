@@ -143,7 +143,7 @@ async function processModels(params) {
 
         //if match was not found
         if(index < 0) {
-            //TODO: Write to log
+            // write to log
             modelLog.write(JSON.stringify(partzillaModel) + '\n');
         }
         //if match was found
@@ -186,7 +186,7 @@ async function processComponents(params) {
 
         //if match was not found
         if(index < 0) {
-            //TODO: Write to log
+            // write to log
             diagramLog.write(JSON.stringify(partzillaComponent) + ' \n');
         }
         //if match was found
