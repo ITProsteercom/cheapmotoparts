@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start":    "node ./app.js --steps default --parse default --sync default --make default --cat default --year default",
-    "demo":     "node ./app.js --steps default --parse default --sync default --make Suzuki --cat Motorcycle --year 2017,2017 --model DL650AL7 --component Battery",
+    "demo":     "node ./app.js --steps diagram --parse default --sync default --make Suzuki --cat Motorcycle --year 2017,2017 --model RM-Z250L7",
     "parse":    "node ./app.js --steps parse -parse default",
     "diagram":  "node ./app.js --steps diagram",
     "import":   "node ./app.js --steps import --sync default",

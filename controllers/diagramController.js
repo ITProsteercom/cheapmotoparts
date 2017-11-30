@@ -174,7 +174,7 @@ async function processComponents(params) {
     const diagramLog = fs.createWriteStream('./tmp/component-errors.log');
 
     let partshouseComponents = await getPartshouseComponents(params.url, params.cookies);
-    let partzillaComponents = await categoryController.getChildrenList(params.model.id, { diagram_url: {$eq: null}});
+    let partzillaComponents = await categoryController.getChildrenList(params.model.id);
 
     //sort by name length for next comparison
     partzillaComponents.sort(sortDescByNameLength);
@@ -207,7 +207,7 @@ async function processComponents(params) {
             });
 
             //remove from source array to exlude further same match found
-            partshouseComponents.slice(index, 1);
+            partshouseComponents.splice(index, 1);
         }
     });
 
@@ -368,12 +368,9 @@ function prepareSectionName(name) {
  */
 function sortDescByNameLength(aName, bName) {
 
-    // let aName = prepareSectionName(a.name);
-    // let bName = prepareSectionName(b.name);
-
-    if (aName.length > bName.length)
+    if (aName.name.length > bName.name.length)
         return -1;
-    if (aName.length < bName.length)
+    if (aName.name.length < bName.name.length)
         return 1;
 
     return 0;
@@ -411,7 +408,7 @@ function intersect(partzillaName, partshouseName) {
         case(partzillaName == partshouseName):
         case(partzillaName.indexOf(partshouseName) != -1):
         case(partshouseName.indexOf(partzillaName) != -1):
-        case(stringSimilarity.compareTwoStrings(partzillaName, partshouseName) > MATCH_PERSENTAGE/100):
+        //case(stringSimilarity.compareTwoStrings(partzillaName, partshouseName) > MATCH_PERSENTAGE/100):
                 return true;
             break;
         default:
