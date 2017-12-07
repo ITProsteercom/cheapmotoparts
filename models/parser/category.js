@@ -1,5 +1,4 @@
 'use strict';
-
 module.exports = (sequelize, DataTypes) => {
 
   const Category = sequelize.define('Category', {
@@ -46,6 +45,8 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Category.belongsTo(Category, {as:'Parent', foreignKey: 'parent_id'});
+
+  Category.hasMany(Category, {as:'Children', foreignKey: 'parent_id'});
 
   Category.upsertBulk = async function (arCategories) {
     await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'diagram_url', 'opencart_id', 'sync']});

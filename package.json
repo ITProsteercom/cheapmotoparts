@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start":    "node ./app.js --steps default --parse default --sync default --make default --cat default --year default",
-    "demo":     "node ./app.js --steps diagram --parse default --sync default --make Suzuki --cat Motorcycle --year 2017,2017 --model RM-Z250L7",
-    "parse":    "node ./app.js --steps parse -parse default",
-    "diagram":  "node ./app.js --steps diagram",
+    "demo":     "node ./app.js --steps default --parse default --sync default --make default --cat Motorcycle --year 2017,2017",
+    "parse":    "node ./app.js --steps parse --parse default",
+    "diagram":  "node ./app.js --steps diagram --make Suzuki",
     "import":   "node ./app.js --steps import --sync default",
     "db:refresh": "npm run db:drop && npm run db:create && npm run db:migrate",
     "db:drop":    "node_modules/.bin/sequelize db:drop --env parser",
@@ -35,7 +35,6 @@
     "progress": "^2.0.0",
     "request": "^2.83.0",
     "sequelize": "^4.22.6",
-    "string-similarity": "^1.2.0",
     "tress": "^1.0.5",
     "yargs": "^10.0.3"
   }

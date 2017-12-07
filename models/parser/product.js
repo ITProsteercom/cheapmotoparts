@@ -41,6 +41,7 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Product.belongsToMany(sequelize.models.Category, { through: sequelize.models.ProductToCategory });
+  sequelize.models.Category.belongsToMany(Product, { through: sequelize.models.ProductToCategory });
 
   Product.upsertBulkAndReturn = async function (arProducts) {
 

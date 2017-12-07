@@ -145,13 +145,13 @@ async function loadProducts() {
 async function parseComponents(queue) {
 
     let componentsHandled = 0;
-    let componentsTotal = await categoryController.count({depth_level: 5});
+    let componentsTotal = await categoryController.count({where: {depth_level: 5}});
 
     progress = createProgressBar('handle products in component categories', componentsTotal);
 
     while(componentsHandled < componentsTotal) {
 
-        let componentsList = await categoryController.findAll({depth_level: 5}, MAX_OPEN_DB_CONNECTIONS, componentsHandled);
+        let componentsList = await categoryController.getList({where: {depth_level: 5}}, MAX_OPEN_DB_CONNECTIONS, componentsHandled);
 
         await Promise.map(componentsList, (component) => {
 

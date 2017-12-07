@@ -1,5 +1,7 @@
 'use strict';
+
 module.exports = (sequelize, DataTypes) => {
+
   var ProductToCategory = sequelize.define('ProductToCategory', {
     product_id: {
       type: DataTypes.INTEGER,

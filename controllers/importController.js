@@ -27,7 +27,7 @@ async function run() {
             .then(() => {
                 psDatabase.sequelize.close();
                 ocDatabase.sequelize.close();
-                log.i('...completed!');
+                log.i('...import completed!');
                 resolve(true);
             })
             .catch((err) => {
@@ -57,9 +57,6 @@ async function sync() {
 
 async function syncCategories() {
 
-    let categoryTotal = await categoryController.count();
-    global.progress = createProgressBar('synchronizing categories', categoryTotal);
-
     await syncCategoryLevel();
     log.i('...categories synchronization was completed successfully');
 }
@@ -70,7 +67,8 @@ async function syncCategoryLevel(depth_level = 1) {
 
         try {
             let psCategoryHandled = 0;
-            const psCategoryTotal = await categoryController.count({ depth_level: depth_level });
+            const psCategoryTotal = await categoryController.count({where: { depth_level: depth_level }});
+            let progress = createProgressBar('synchronizing categories of depth_level '+depth_level, psCategoryTotal);
 
             if(psCategoryTotal == 0) {
                 resolve(true);
@@ -80,12 +78,7 @@ async function syncCategoryLevel(depth_level = 1) {
             while(psCategoryHandled < psCategoryTotal) {
 
                 //get category list from DB
-                let psCategories = await psDatabase.Category.findAll({
-                    where: { depth_level: depth_level },
-                    include: [{model: psDatabase.Category, as: 'Parent'}],
-                    limit: MAX_OPEN_DB_CONNECTIONS,
-                    offset: psCategoryHandled
-                });
+                let psCategories = await categoryController.getList({where: { depth_level: depth_level }}, MAX_OPEN_DB_CONNECTIONS, psCategoryHandled);
 
                 //update categories in opencar db and return parser category models with opencart ids
                 let categories = await updateOpencartCategories(psCategories);
@@ -111,7 +104,7 @@ async function syncDiagrams() {
     return new Promise(async (resolve, reject) => {
 
         try {
-            const componentsTotal = await psDatabase.Category.count({
+            const componentsTotal = await categoryController.count({
                 where: {
                     depth_level: 5,
                     diagram_url: {$ne: null},
@@ -129,15 +122,16 @@ async function syncDiagrams() {
 
             while(componentsHandled < componentsTotal) {
                 //get from parser DB component list with diagrams and sync with opencart DB
-                let psCategories = await psDatabase.Category.findAll({
-                    where: {
-                        depth_level: 5,
-                        diagram_url: {$ne: null},
-                        opencart_id: {$ne: null}
+                let psCategories = await catagoryController.getList({
+                        where: {
+                            depth_level: 5,
+                            diagram_url: {$ne: null},
+                            opencart_id: {$ne: null}
+                        }
                     },
-                    limit: MAX_OPEN_DB_CONNECTIONS,
-                    offset: componentsHandled
-                });
+                    MAX_OPEN_DB_CONNECTIONS,
+                    componentsHandled
+                );
 
                 await Promise.map(psCategories, async (psCategory) => {
 
@@ -167,9 +161,7 @@ async function syncManufacturers() {
 
     return new Promise(async (resolve, reject) => {
 
-        let psManufacturers = psDatabase.Category.findAll({
-            where: { depth_level: 1 }
-        });
+        let psManufacturers = await categoryController.getList({where: {depth_level: 1}});
 
         let ocManufacturers = await ocDatabase.Manufacturer.findAll();
 
@@ -190,61 +182,79 @@ async function syncProducts() {
     return new Promise(async (resolve, reject) => {
 
         try {
-            const productsTotal = await psDatabase.Product.count({
-                // where: {
-                //     opencart_id: {$eq: null}
-                // }
-            });
 
-            if (!productsTotal) {
-                log.i('all products have been synchronized');
-                resolve(true);
-            }
+            let componentsHandled = 0;
+            let componentsTotal = await categoryController.count({where: {depth_level: 5}});
 
-            const progress = createProgressBar('synchronizing products', productsTotal);
-            let productsHandled = 0;
-            while (productsHandled < productsTotal) {
-               
-                let products = await psDatabase.Product.findAll({
-                    // where: {
-                    //     opencart_id: {$eq: null}
-                    // },
-                    include: [psDatabase.Category],
-                    limit: MAX_OPEN_DB_CONNECTIONS,
-                    offset: productsHandled
-                });
+            log.start('Products synchronized %s');
 
-                await Promise.map(products, async (psProduct) => {
+            let progress = createProgressBar('synchronizing products in component categories', componentsTotal);
 
-                    //parse manufacturer name from product url
-                    let manufacturerName = psProduct.url.slice(1).split('/')[1];
+            while(componentsHandled < componentsTotal) {
 
-                    let ocManufacturer = await ocDatabase.Manufacturer.findOne({where: {name: manufacturerName}});
+                let componentsList = await categoryController.getList({
+                        where: {depth_level: 5},
+                        include: {
+                            model: psDatabase.Product,
+                            as: 'Products',
+                            include: [psDatabase.Category]
+                        }
+                    }, 
+                    MAX_OPEN_DB_CONNECTIONS,
+                    componentsHandled
+                );
 
-                    let ocProduct = await ocDatabase.Product.upsertFromParser({
-                        name: psProduct.name,
-                        sku: psProduct.sku,
-                        price: psProduct.price * 1.15,
-                        alias: psProduct.sku,
-                        manufacturer_id: ocManufacturer ? ocManufacturer.manufacturer_id : 0
-                    });
+                await Promise.map(componentsList, async (component) => {
 
-                    await ocProduct.assignCategories(psProduct.Categories);
-                    await psProduct.update({opencart_id: ocProduct.product_id, sync: true});
+                    await updateComponentProducts(component.Products);
 
-                    productsHandled += 1;
+                    componentsHandled += 1;
+                    log.step(component.Products.length);
                     progress.tick();
-
                 }, {
-                    concurrency: 10
+                    concurrency: MAX_OPEN_DB_CONNECTIONS
                 });
             }
 
+            log.finish();
             log.i('...products synchronization was completed successfully');
             resolve(true);
         }
         catch (err) {
             reject(err);
+        }
+    });
+}
+
+async function updateComponentProducts(products) {
+
+    return new Promise(async (resolve, reject) => {
+
+        if(typeof products !== 'undefined') {
+
+            await Promise.map(products, async (psProduct)=> {
+
+                //parse manufacturer name from product url
+                let manufacturerName = psProduct.url.slice(1).split('/')[1];
+
+                let ocManufacturer = await ocDatabase.Manufacturer.findOne({where: {name: manufacturerName}});
+
+                let ocProduct = await ocDatabase.Product.upsertFromParser({
+                    name: psProduct.name,
+                    sku: psProduct.sku,
+                    price: psProduct.price * 1.15,
+                    alias: psProduct.sku,
+                    manufacturer_id: ocManufacturer ? ocManufacturer.manufacturer_id : 0
+                });
+
+                await ocProduct.assignCategories(psProduct.Categories);
+                await psProduct.update({opencart_id: ocProduct.product_id, sync: true});
+            });
+
+            resolve(true);
+        }
+        else{
+            resolve(true);
         }
     });
 }

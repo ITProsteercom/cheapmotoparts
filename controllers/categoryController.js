@@ -4,14 +4,8 @@ const debug = require('debug')('controller:category');
 var appConfig = require('./configController');
 const Category = require('../models/database').parser.Category;
 
-//depth level - category name
-const categoryChain = {
-    1: 'make',
-    2: 'cat',
-    3: 'year',
-    4: 'model',
-    5: 'component'
-};
+var categoryChain = require('./../repo/categoryChain');
+var filterConstructor = require('./../repo/filterConstructor');
 
 async function loadCategories(html, parent_id) {
 
@@ -25,7 +19,6 @@ async function loadCategories(html, parent_id) {
     return await upsertAndReturnCategories(filteredCategories, parent_id);
 }
 
-
 async function upsertAndReturnCategories(categories, parent_id) {
 
     if(categories.length <= 0)
@@ -33,7 +26,6 @@ async function upsertAndReturnCategories(categories, parent_id) {
 
     return await Category.upsertBulkAndReturn(categories, parent_id);
 }
-
 
 async function updateCategories(categories) {
 
@@ -48,7 +40,8 @@ function filterCategories(categoryList) {
     if(categoryList.length == 0)
         return [];
 
-    let category_type = categoryChain[getDepthLevel(categoryList[0].url)];
+    let depth_level = getDepthLevel(categoryList[0].url);
+    let category_type = categoryChain.getType(depth_level);
     let filterUrl = appConfig.get(category_type);
 
     if(typeof filterUrl === 'undefined' || filterUrl == null)
@@ -85,6 +78,11 @@ async function parseCategoties(html_page, parent_id) {
     return categories;
 }
 
+/**
+ * get category depth level by its url
+ * @param url
+ * @returns {number}
+ */
 function getDepthLevel(url) {
 
     return url.slice(1).split('/').length - 1;
@@ -128,11 +126,22 @@ async function findAll(filter = {}, limit = 0, offset = 0) {
     return await Category.findAll(options);
 }
 
-async function count(filter = {}) {
+async function count(options = {}) {
 
-    return await Category.count({
-        where: filter
-    });
+    return await Category.count(filterConstructor.make(options));
+}
+
+async function getList(options = {}, limit = 0, offset = 0) {
+
+    options = filterConstructor.make(options)
+
+    if(limit > 0)
+        options['limit'] = limit;
+
+    if(offset > 0)
+        options['offset'] = offset;
+
+    return await Category.findAll(options);
 }
 
 module.exports = {
@@ -142,5 +151,6 @@ module.exports = {
     getMakeList,
     getChildrenList,
     count,
-    findAll
+    findAll,
+    getList
 };

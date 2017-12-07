@@ -1,4 +1,3 @@
-var default_config = require(__dirname + '/../config/config.js').default;
 const ProgressBar = require('progress');
 const Promise = require('bluebird');
 const fs = require('fs');
@@ -36,7 +35,6 @@ function fileExists(path) {
 function getRandomInRange(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
 }
-
 
 module.exports = {
     createProgressBar,

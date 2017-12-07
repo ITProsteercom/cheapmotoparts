@@ -8,7 +8,6 @@ const Promise = require("bluebird");
 const path = require('path');
 const childProcess = require('child_process');
 const intersection = require('array-intersection');
-const stringSimilarity = require('string-similarity');
 const fs = require('fs');
 
 const authController = require('./authController');
@@ -18,9 +17,7 @@ const { fileExists, getRandomInRange } = require('./utils');
 const PARALLEL_STREAMS = +ENV.PARALLEL_STREAMS || 10;
 const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
 const TIME_WAITING = +ENV.TIME_WAITING || 300000; //default 5 minutes
-
 const ocImagesPath = ENV.OC_IMAGES_PATH || '/var/www/html/image/';
-const MATCH_PERSENTAGE = 80;
 
 var q;
 var componentsToUpdate = [];
@@ -80,6 +77,7 @@ async function parse() {
 }
 
 async function queryParsingCallback(params, callback) {
+
     try {
         if (params.step == 'models') {
             await processModels(params);
@@ -103,12 +101,12 @@ async function queryParsingCallback(params, callback) {
 
 async function processYears(params) {
     //get categories of current manufacturer
-    let categories = await categoryController.getChildrenList(params.make.id);
+    let categories = await categoryController.getList({where: {depth_level: 2, parent_id: params.make.id}});
 
     await Promise.map(categories, async (category) => {
 
         //get years of current category
-        let years = await categoryController.getChildrenList(category.id);
+        let years = await categoryController.getList({where: {depth_level: 3, parent_id: category.id}});
 
         await Promise.map(years, async (year) => {
 
@@ -128,12 +126,14 @@ async function processYears(params) {
 
 async function processModels(params) {
 
-    const modelLog = fs.createWriteStream('./tmp/model-errors.log');
+    var modelLog = fs.createWriteStream('./tmp/model-errors.log');
 
     let partshouseModels = await getPartshouseModels(params.url, params.cookies);
-    let partzillaModels = await categoryController.getChildrenList(params.year.id);
+    // let partzillaModels = await categoryController.getChildrenList(params.year.id);
+    let partzillaModels = await categoryController.getList({where: {depth_level: 4, parent_id: params.year.id}});
 
     //sort by name length for next comparison
+    partshouseModels.sort(sortDescByNameLength);
     partzillaModels.sort(sortDescByNameLength);
 
     await Promise.map(partzillaModels, async (partzillaModel) => {
@@ -144,14 +144,14 @@ async function processModels(params) {
         //if match was not found
         if(index < 0) {
             // write to log
-            modelLog.write(JSON.stringify(partzillaModel) + '\n');
+            modelLog.write(partzillaModel.id +' - '+ partzillaModel.name +' - '+ partzillaModel.url + ' \n');
         }
         //if match was found
         else {
             let partshouseModel = partshouseModels[index];
 
             debug('add ' + getPartshouseUrl([params.make.name]) + partshouseModel.url + ' to query');
-            log.step(1);
+
             q.push({
                 step: 'components',
                 url: getPartshouseUrl([params.make.name]) + partshouseModel.url,
@@ -162,21 +162,26 @@ async function processModels(params) {
             });
 
             //remove from source array to exlude further same match found
-            partshouseModels.slice(index, 1);
+            partshouseModels.splice(index, 1);
         }
+
+        log.step(1);
     });
 
-    modelLog.close();
+    //modelLog.close();
 }
 
 async function processComponents(params) {
 
-    const diagramLog = fs.createWriteStream('./tmp/component-errors.log');
+    var diagramLog = fs.createWriteStream('./tmp/component-errors.log');
 
     let partshouseComponents = await getPartshouseComponents(params.url, params.cookies);
-    let partzillaComponents = await categoryController.getChildrenList(params.model.id);
+
+    // let partzillaComponents = await categoryController.getChildrenList(params.model.id);
+    let partzillaComponents = await categoryController.getList({where: {depth_level: 5, parent_id: params.model.id}});
 
     //sort by name length for next comparison
+    partshouseComponents.sort(sortDescByNameLength);
     partzillaComponents.sort(sortDescByNameLength);
 
     await Promise.map(partzillaComponents, async (partzillaComponent) => {
@@ -187,14 +192,13 @@ async function processComponents(params) {
         //if match was not found
         if(index < 0) {
             // write to log
-            diagramLog.write(JSON.stringify(partzillaComponent) + ' \n');
+            diagramLog.write(partzillaComponent.id +' - '+ partzillaComponent.name +' - '+ partzillaComponent.url + ' \n');
         }
         //if match was found
         else {
             let partshouseComponent = partshouseComponents[index];
 
             debug('add ' + getPartshouseUrl([params.make.name]) + partshouseComponent.url + ' to query');
-            log.step(0, 1);
 
             q.push({
                 step: 'diagram',
@@ -209,9 +213,11 @@ async function processComponents(params) {
             //remove from source array to exlude further same match found
             partshouseComponents.splice(index, 1);
         }
+
+        log.step(0, 1);
     });
 
-    diagramLog.close();
+    //diagramLog.close();
 }
 
 async function processDiagram(params) {
@@ -300,9 +306,6 @@ async function parseComponents(html_page) {
             url: $(el).attr('href')
         });
     });
-
-    //sort by name length for further correct comparison of partzilla names
-    components.sort(sortDescByNameLength);
 
     return components;
 }
@@ -408,12 +411,10 @@ function intersect(partzillaName, partshouseName) {
         case(partzillaName == partshouseName):
         case(partzillaName.indexOf(partshouseName) != -1):
         case(partshouseName.indexOf(partzillaName) != -1):
-        //case(stringSimilarity.compareTwoStrings(partzillaName, partshouseName) > MATCH_PERSENTAGE/100):
-                return true;
-            break;
+            return true;
         default:
-                return defaultIntersect(partzillaName, partshouseName);
-            break;
+            return defaultIntersect(partzillaName, partshouseName);
+        break;
     }
 
     return false;

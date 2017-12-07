@@ -8,7 +8,10 @@ var basename  = path.basename(__filename);
 const Op = Sequelize.Op;
 const operatorsAliases = {
     $eq: Op.eq,
-    $ne: Op.ne
+    $ne: Op.ne,
+    $in: Op.in,
+    $between: Op.between,
+    $all: Op.all
 };
 
 var db = {};
