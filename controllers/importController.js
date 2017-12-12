@@ -122,7 +122,7 @@ async function syncDiagrams() {
 
             while(componentsHandled < componentsTotal) {
                 //get from parser DB component list with diagrams and sync with opencart DB
-                let psCategories = await catagoryController.getList({
+                let psCategories = await categoryController.getList({
                         where: {
                             depth_level: 5,
                             diagram_url: {$ne: null},
