@@ -26,12 +26,7 @@ async function parse() {
 
     log.i('Parsing diagrams from partshouse started');
 
-    //clear logs
-    if(fs.existsSync('./tmp/model-errors.log'))
-            fs.unlinkSync('./tmp/model-errors.log');
-
-    if(fs.existsSync('./tmp/component-errors.log'))
-        fs.unlinkSync('./tmp/component-errors.log');
+    clearLogFiles();
 
     return new Promise(async (resolve, reject) => {
 
@@ -516,6 +511,7 @@ async function loadDiagram(Category) {
                 } catch (e) {
                     let message = `ID: ${Category.id}\nName: ${Category.name}\nURL: ${Category.diagram_url}\nError Message: ${e.message}\n\n`;
                     log.w(`Error loading -  ${message}\n${e.message}`);
+                    fs.appendFileSync('./tmp/diagrams-errors.log', message);
                 }
             }
         }
@@ -559,6 +555,18 @@ function getImageName(diagram_url) {
         filename = 'noimg.img';
 
     return path.join('catalog/diagrams/', filename);
+}
+
+function clearLogFiles() {
+
+    if (fs.existsSync('./tmp/model-errors.log'))
+        fs.unlinkSync('./tmp/model-errors.log');
+
+    if (fs.existsSync('./tmp/component-errors.log'))
+        fs.unlinkSync('./tmp/component-errors.log');
+
+    if (fs.existsSync('./tmp/diagrams-errors.log'))
+        fs.unlinkSync('./tmp/diagrams-errors.log');
 }
 
 module.exports = {
