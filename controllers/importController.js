@@ -186,7 +186,7 @@ async function syncProducts() {
             let componentsHandled = 0;
             let componentsTotal = await categoryController.count({where: {depth_level: 5}});
 
-            log.start('Products synchronized %s');
+            let productsCount = 0;
 
             let progress = createProgressBar('synchronizing products in component categories', componentsTotal);
 
@@ -209,15 +209,15 @@ async function syncProducts() {
                     await updateComponentProducts(component.Products);
 
                     componentsHandled += 1;
-                    log.step(component.Products.length);
+                    productsCount += component.Products.length;
                     progress.tick();
                 }, {
                     concurrency: MAX_OPEN_DB_CONNECTIONS
                 });
             }
 
-            log.finish();
-            log.i('...products synchronization was completed successfully');
+            log.i('... products synchronization was completed successfully');
+            log.i('Products synchronized: ' + productsCount);
             resolve(true);
         }
         catch (err) {
@@ -231,7 +231,7 @@ async function updateComponentProducts(products) {
     return new Promise(async (resolve, reject) => {
 
         if(typeof products !== 'undefined') {
-
+            //console.log('updateComponentProducts');
             await Promise.map(products, async (psProduct)=> {
 
                 //parse manufacturer name from product url
