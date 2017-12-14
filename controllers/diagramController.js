@@ -132,8 +132,11 @@ async function processModels(params) {
     // let partzillaModels = await categoryController.getChildrenList(params.year.id);
     let partzillaModels = await categoryController.getList({where: {depth_level: 4, parent_id: params.year.id}});
 
-    //sort by name length for next comparison
+    //sort by name and name length for next comparison
+    partshouseModels.sort(sortDescByName);
     partshouseModels.sort(sortDescByNameLength);
+
+    partzillaModels.sort(sortDescByName);
     partzillaModels.sort(sortDescByNameLength);
 
     await Promise.map(partzillaModels, async (partzillaModel) => {
@@ -181,7 +184,10 @@ async function processComponents(params) {
     let partzillaComponents = await categoryController.getList({where: {depth_level: 5, parent_id: params.model.id}});
 
     //sort by name length for next comparison
+    partshouseComponents.sort(sortDescByName);
     partshouseComponents.sort(sortDescByNameLength);
+
+    partzillaComponents.sort(sortDescByName);
     partzillaComponents.sort(sortDescByNameLength);
 
     await Promise.map(partzillaComponents, async (partzillaComponent) => {
@@ -358,7 +364,9 @@ async function parseDiagramUrl(url, cookies) {
 function prepareSectionName(name) {
 
     return name.replace(/\W/g, ' ')
+        .replace('-', '')
         .replace(/\s+/g, ' ')
+        .trim()
         .toLowerCase();
 }
 
@@ -371,9 +379,32 @@ function prepareSectionName(name) {
  */
 function sortDescByNameLength(aName, bName) {
 
-    if (aName.name.length > bName.name.length)
+    aName = prepareSectionName(aName.name);
+    bName = prepareSectionName(bName.name);
+
+    if (aName.length > bName.length)
         return -1;
-    if (aName.name.length < bName.name.length)
+    if (aName.length < bName.length)
+        return 1;
+
+    return 0;
+}
+
+/**
+ * Callback sorting objects by name
+ *
+ * @param a
+ * @param b
+ * @returns {number}
+ */
+function sortDescByName(aName, bName) {
+
+    aName = prepareSectionName(aName.name);
+    bName = prepareSectionName(bName.name);
+
+    if (aName > bName)
+        return -1;
+    if (aName < bName)
         return 1;
 
     return 0;

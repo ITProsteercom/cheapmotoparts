@@ -182,6 +182,71 @@ async function syncProducts() {
     return new Promise(async (resolve, reject) => {
 
         try {
+            const productsTotal = await psDatabase.Product.count({
+                // where: {
+                //     opencart_id: {$eq: null}
+                // }
+            });
+
+            if (!productsTotal) {
+                log.i('all products have been synchronized');
+                resolve(true);
+            }
+
+            const progress = createProgressBar('synchronizing products', productsTotal);
+            let productsHandled = 0;
+            while (productsHandled < productsTotal) {
+
+                let products = await psDatabase.Product.findAll({
+                    // where: {
+                    //     opencart_id: {$eq: null}
+                    // },
+                    include: [psDatabase.Category],
+                    limit: MAX_OPEN_DB_CONNECTIONS,
+                    offset: productsHandled
+                });
+
+                await Promise.map(products, async (psProduct) => {
+
+                    //parse manufacturer name from product url
+                    let manufacturerName = psProduct.url.slice(1).split('/')[1];
+
+                    let ocManufacturer = await ocDatabase.Manufacturer.findOne({where: {name: manufacturerName}});
+
+                    let ocProduct = await ocDatabase.Product.upsertFromParser({
+                        name: psProduct.name,
+                        sku: psProduct.sku,
+                        price: psProduct.price * 1.15,
+                        alias: psProduct.sku,
+                        manufacturer_id: ocManufacturer ? ocManufacturer.manufacturer_id : 0
+                    });
+
+                    await ocProduct.assignCategories(psProduct.Categories);
+                    await psProduct.update({opencart_id: ocProduct.product_id, sync: true});
+
+                    productsHandled += 1;
+                    progress.tick();
+
+                }, {
+                    concurrency: 10
+                });
+            }
+
+            log.i('...products synchronization was completed successfully');
+            resolve(true);
+        }
+        catch (err) {
+            reject(err);
+        }
+    });
+}
+
+/*
+async function syncProducts() {
+
+    return new Promise(async (resolve, reject) => {
+
+        try {
 
             let componentsHandled = 0;
             let componentsTotal = await categoryController.count({where: {depth_level: 5}});
@@ -258,7 +323,7 @@ async function updateComponentProducts(products) {
         }
     });
 }
-
+*/
 async function updateOpencartCategories (psCategories) {
 
     return new Promise(async (resolve, reject) => {
