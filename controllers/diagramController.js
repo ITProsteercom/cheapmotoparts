@@ -121,18 +121,13 @@ async function processYears(params) {
 
 async function processModels(params) {
 
-    var modelLog = fs.createWriteStream('./tmp/model-errors.log');
-
     let partshouseModels = await getPartshouseModels(params.url, params.cookies);
     // let partzillaModels = await categoryController.getChildrenList(params.year.id);
     let partzillaModels = await categoryController.getList({where: {depth_level: 4, parent_id: params.year.id}});
 
     //sort by name and name length for next comparison
-    partshouseModels.sort(sortDescByName);
-    partshouseModels.sort(sortDescByNameLength);
-
-    partzillaModels.sort(sortDescByName);
-    partzillaModels.sort(sortDescByNameLength);
+    partshouseModels = sotrByLengthThenName(partshouseModels);
+    partzillaModels = sotrByLengthThenName(partzillaModels);
 
     await Promise.map(partzillaModels, async (partzillaModel) => {
 
@@ -142,7 +137,8 @@ async function processModels(params) {
         //if match was not found
         if(index < 0) {
             // write to log
-            modelLog.write(partzillaModel.id +' - '+ partzillaModel.name +' - '+ partzillaModel.url + ' \n');
+            let message = `ID: ${partzillaModel.id}\nName: ${partzillaModel.name}\nOPENCART ID: ${partzillaModel.opencart_id}\n\n`;
+            fs.appendFileSync('./tmp/component-errors.log', message);
         }
         //if match was found
         else {
@@ -159,19 +155,15 @@ async function processModels(params) {
                 model: partzillaModel
             });
 
-            //remove from source array to exlude further same match found
+            //remove from source array to exclude further same match found
             partshouseModels.splice(index, 1);
         }
 
         log.step(1);
     });
-
-    //modelLog.close();
 }
 
 async function processComponents(params) {
-
-    var diagramLog = fs.createWriteStream('./tmp/component-errors.log');
 
     let partshouseComponents = await getPartshouseComponents(params.url, params.cookies);
 
@@ -179,11 +171,8 @@ async function processComponents(params) {
     let partzillaComponents = await categoryController.getList({where: {depth_level: 5, parent_id: params.model.id}});
 
     //sort by name length for next comparison
-    partshouseComponents.sort(sortDescByName);
-    partshouseComponents.sort(sortDescByNameLength);
-
-    partzillaComponents.sort(sortDescByName);
-    partzillaComponents.sort(sortDescByNameLength);
+    partshouseComponents = sotrByLengthThenName(partshouseComponents);
+    partzillaComponents = sotrByLengthThenName(partzillaComponents);
 
     await Promise.map(partzillaComponents, async (partzillaComponent) => {
 
@@ -193,7 +182,8 @@ async function processComponents(params) {
         //if match was not found
         if(index < 0) {
             // write to log
-            diagramLog.write(partzillaComponent.id +' - '+ partzillaComponent.name +' - '+ partzillaComponent.url + ' \n');
+            let message = `ID: ${partzillaComponent.id}\nName: ${partzillaComponent.name}\nDIAGRAM URL: ${partzillaComponent.url}\nOPENCART ID: ${partzillaComponent.opencart_id}\n\n`;
+            fs.appendFileSync('./tmp/component-errors.log', message);
         }
         //if match was found
         else {
@@ -217,8 +207,6 @@ async function processComponents(params) {
 
         log.step(0, 1);
     });
-
-    //diagramLog.close();
 }
 
 async function processDiagram(params) {
@@ -403,6 +391,36 @@ function sortDescByName(aName, bName) {
         return 1;
 
     return 0;
+}
+
+/**
+ * Sort array of object firstly by name length the by names itself
+ * @param arr
+ * @returns {Array}
+ */
+function sotrByLengthThenName(arr) {
+
+    arr.sort(sortDescByNameLength);
+
+    let groupedByNameLength = {};
+    arr.map((el) => {
+
+        let elName = prepareSectionName(el.name);
+
+        if(typeof groupedByNameLength[elName.length] === 'undefined')
+            groupedByNameLength[elName.length] = [el];
+        else
+            groupedByNameLength[elName.length].push(el);
+    });
+
+    let result = [];
+    Object.keys(groupedByNameLength).forEach((length) => {
+        groupedByNameLength[length].sort(sortDescByName);
+
+        groupedByNameLength[length].forEach(el => result.unshift(el));
+    });
+
+    return result;
 }
 
 /**
