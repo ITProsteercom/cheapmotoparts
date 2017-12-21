@@ -4,19 +4,20 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start":    "node ./app.js --steps default --parse default --sync default --make default --cat default --year default",
-    "demo":     "node ./app.js --steps default --parse default --sync default --make default --cat Motorcycle --year 2017,2017",
-    "parse":    "node ./app.js --steps parse --parse default",
-    "diagram":  "node ./app.js --steps diagram --make Suzuki",
-    "import":   "node ./app.js --steps import --sync default",
+    "start": "node ./app.js --steps default --parse default --sync default --make default --cat default --year default",
+    "demo": "node ./app.js --steps default --parse default --sync default --make default --cat Motorcycle --year 2017,2017",
+    "parse": "node ./app.js --steps parse --parse default",
+    "diagram": "node ./app.js --steps diagram --make Suzuki",
+    "import": "node ./app.js --steps import --sync default",
     "db:refresh": "npm run db:drop && npm run db:create && npm run db:migrate",
-    "db:drop":    "node_modules/.bin/sequelize db:drop --env parser",
-    "db:create":  "node_modules/.bin/sequelize db:create --env parser",
+    "db:drop": "node_modules/.bin/sequelize db:drop --env parser",
+    "db:create": "node_modules/.bin/sequelize db:create --env parser",
     "db:migrate": "node_modules/.bin/sequelize db:migrate --env parser"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "crc-32": "^1.1.1",
     "sequelize-cli": "^3.0.0"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "lodash": "^4.17.4",
     "mysql2": "^1.4.2",
     "needle": "^2.0.1",
+    "object-hash": "^1.2.0",
     "progress": "^2.0.0",
     "request": "^2.83.0",
     "sequelize": "^4.22.6",

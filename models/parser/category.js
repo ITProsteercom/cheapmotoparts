@@ -23,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       unique: true
     },
-    diagram_url: {
+    diagram_hash: {
       type: DataTypes.STRING,
       allowNull: true,
       defaultValue: null
@@ -32,10 +32,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: null
-    },
-    sync: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false
     }
   }, {
     tableName: 'categories',
@@ -49,12 +45,12 @@ module.exports = (sequelize, DataTypes) => {
   Category.hasMany(Category, {as:'Children', foreignKey: 'parent_id'});
 
   Category.upsertBulk = async function (arCategories) {
-    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'diagram_url', 'opencart_id', 'sync']});
+    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'diagram_hash', 'opencart_id']});
   };
 
   Category.upsertBulkAndReturn = async function (arCategories, parent_id) {
 
-    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'opencart_id', 'sync']});
+    await Category.bulkCreate(arCategories, {updateOnDuplicate: ['parent_id', 'name', 'url', 'opencart_id', 'diagram_hash']});
 
     return Category.findAll({
         where: {parent_id: parent_id}

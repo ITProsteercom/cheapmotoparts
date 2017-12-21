@@ -63,4 +63,4 @@ async function parseComponentProducts(html) {
 
 module.exports = {
     loadProducts
-}
+};

@@ -47,7 +47,7 @@ var AppConfig = function() {
 
     var get = function (key = '') {
 
-        if(key) {
+        if(key.length) {
             if(typeof appConfig[key] === 'undefined')
                 return null;
 

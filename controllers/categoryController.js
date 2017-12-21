@@ -13,7 +13,8 @@ async function loadCategories(html, parent_id) {
     let categoriesPartzilla = await parseCategoties(html, parent_id);
 
     //filter categories
-    let filteredCategories = filterCategories(categoriesPartzilla);
+    let depth_level = getDepthLevel(categoriesPartzilla[0].url);
+    let filteredCategories = filterCategories(categoriesPartzilla, depth_level);
 
     //save categories to db
     return await upsertAndReturnCategories(filteredCategories, parent_id);
@@ -35,12 +36,11 @@ async function updateCategories(categories) {
     return await Category.upsertBulk(categories);
 }
 
-function filterCategories(categoryList) {
+function filterCategories(categoryList, depth_level = 1) {
 
     if(categoryList.length == 0)
         return [];
 
-    let depth_level = getDepthLevel(categoryList[0].url);
     let category_type = categoryChain.getType(depth_level);
     let filterUrl = appConfig.get(category_type);
 
@@ -79,7 +79,7 @@ async function parseCategoties(html_page, parent_id) {
 }
 
 /**
- * get category depth level by its url
+ * get category depth level by its url from Partzilla
  * @param url
  * @returns {number}
  */
@@ -87,6 +87,7 @@ function getDepthLevel(url) {
 
     return url.slice(1).split('/').length - 1;
 }
+
 
 /**
  * get list of manufacturers
@@ -133,7 +134,7 @@ async function count(options = {}) {
 
 async function getList(options = {}, limit = 0, offset = 0) {
 
-    options = filterConstructor.make(options)
+    options = filterConstructor.make(options);
 
     if(limit > 0)
         options['limit'] = limit;
@@ -147,6 +148,7 @@ async function getList(options = {}, limit = 0, offset = 0) {
 module.exports = {
     loadCategories,
     updateCategories,
+    filterCategories,
     upsertAndReturnCategories,
     getMakeList,
     getChildrenList,

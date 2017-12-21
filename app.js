@@ -5,7 +5,7 @@ const log = require('cllc')();
 const argv = require('yargs').argv;
 
 const parseController = require('./controllers/parseController');
-const diagramController = require('./controllers/diagramController');
+const parsePartshouse = require('./controllers/parsePartshouse');
 const importController = require('./controllers/importController');
 
 var appConfig = require('./controllers/configController');
@@ -28,7 +28,7 @@ async function run() {
         }
 
         if(appConfig.get('steps').includes('diagram')) {
-            await diagramController.parse();
+            await parsePartshouse.parse();
         }
 
         if(appConfig.get('steps').includes('import')) {

@@ -82,7 +82,6 @@ async function syncCategoryLevel(depth_level = 1) {
 
                 //update categories in opencar db and return parser category models with opencart ids
                 let categories = await updateOpencartCategories(psCategories);
-
                 //mark categories in parser db as synchronized and go sync children in each
                 await categoryController.upsertAndReturnCategories(categories, depth_level);
 
@@ -107,7 +106,7 @@ async function syncDiagrams() {
             const componentsTotal = await categoryController.count({
                 where: {
                     depth_level: 5,
-                    diagram_url: {$ne: null},
+                    diagram_hash: {$ne: null},
                     opencart_id: {$ne: null}
                 }
             });
@@ -125,7 +124,7 @@ async function syncDiagrams() {
                 let psCategories = await categoryController.getList({
                         where: {
                             depth_level: 5,
-                            diagram_url: {$ne: null},
+                            diagram_hash: {$ne: null},
                             opencart_id: {$ne: null}
                         }
                     },
@@ -222,7 +221,7 @@ async function syncProducts() {
                     });
 
                     await ocProduct.assignCategories(psProduct.Categories);
-                    await psProduct.update({opencart_id: ocProduct.product_id, sync: true});
+                    await psProduct.update({opencart_id: ocProduct.product_id});
 
                     productsHandled += 1;
                     progress.tick();
@@ -313,7 +312,7 @@ async function updateComponentProducts(products) {
                 });
 
                 await ocProduct.assignCategories(psProduct.Categories);
-                await psProduct.update({opencart_id: ocProduct.product_id, sync: true});
+                await psProduct.update({opencart_id: ocProduct.product_id});
             });
 
             resolve(true);
@@ -340,7 +339,6 @@ async function updateOpencartCategories (psCategories) {
 
             let cat = psCategory.dataValues;
                 cat.opencart_id = ocCategory.category_id;
-                cat.sync = true;
 
             categories.push(cat);
         }, {

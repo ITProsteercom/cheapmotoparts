@@ -14,6 +14,8 @@ const authController = require('./authController');
 const categoryController = require('./categoryController');
 const { fileExists, getRandomInRange } = require('./utils');
 
+const CategoryPartshouse = require('../models/database').parser.CategoryPartshouse;
+
 const PARALLEL_STREAMS = +ENV.PARALLEL_STREAMS || 10;
 const MAX_OPEN_DB_CONNECTIONS = +ENV.MAX_OPEN_DB_CONNECTIONS || 100;
 const TIME_WAITING = +ENV.TIME_WAITING || 300000; //default 5 minutes
@@ -514,28 +516,44 @@ async function loadDiagram(Category) {
 
         let imageName = null;
 
-        if (!!Category.diagram_url) {
+        if (!!Category.diagram_hash) {
 
-            imageName = getImageName(Category.diagram_url);
-            let imageSavePath = path.join(ocImagesPath + imageName);
+            //get diagram_url from partshouse categories bu diagram hash
+            let diagram_url = await getDiagramUrl(Category.diagram_hash);
 
-            if (await fileExists(imageSavePath)) {
-                debug(`Diagram ${imageName} already exists!`);
-            } else {
-                try {
-                    debug(`Loading diagram: ${imageName}`);
-                    await downloadZoomableImage(Category.diagram_url, imageSavePath);
-                    resolve(imageName);
-                } catch (e) {
-                    let message = `ID: ${Category.id}\nName: ${Category.name}\nURL: ${Category.diagram_url}\nError Message: ${e.message}\n\n`;
-                    log.w(`Error loading -  ${message}\n${e.message}`);
-                    fs.appendFileSync('./tmp/diagrams-errors.log', message);
+            if(!!diagram_url) {
+
+                imageName = getImageName(diagram_url);
+                let imageSavePath = path.join(ocImagesPath + imageName);
+
+                if (await fileExists(imageSavePath)) {
+                    debug(`Diagram ${imageName} already exists!`);
+                } else {
+                    try {
+                        debug(`Loading diagram: ${imageName}`);
+                        await downloadZoomableImage(diagram_url, imageSavePath);
+                        resolve(imageName);
+                    } catch (e) {
+                        let message = `ID: ${Category.id}\nName: ${Category.name}\nURL: ${diagram_url}\nError Message: ${e.message}\n\n`;
+                        log.w(`Error loading -  ${message}\n${e.message}`);
+                        fs.appendFileSync('./tmp/diagrams-errors.log', message);
+                    }
                 }
             }
         }
 
         resolve(imageName);
     });
+}
+
+async function getDiagramUrl(diagram_hash) {
+
+    let categoryList = await CategoryPartshouse.findAll({where: {depth_level: 5, diagram_hash: diagram_hash}});
+
+    if(categoryList.length == 0)
+        return null;
+
+    return categoryList[0].diagram_url;
 }
 
 async function downloadZoomableImage(imageUrl, filename) {

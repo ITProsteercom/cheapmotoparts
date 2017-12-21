@@ -4,8 +4,10 @@ const ENV = require('dotenv').load().parsed;
 const config = require('../config/config.js');
 const debug = require('debug')('controller:parse');
 const log = require('cllc')();
+const cheerio = require('cheerio');
 const needle = require('needle');
 const tress = require('tress');
+const hash = require('object-hash');
 const Promise = require('bluebird');
 const { createProgressBar } = require('./utils');
 
@@ -13,6 +15,8 @@ const authController = require('./authController');
 const categoryController = require('./categoryController');
 const productController = require('./productController');
 const productToCategoryController = require('./productToCategoryController');
+
+const Category = require('../models/database').parser.Category;
 
 var appConfig = require('./configController');
 
@@ -183,6 +187,10 @@ async function parseProducts(item, callback) {
                 //add products to categories associations
                 await productToCategoryController.saveProductsToCategory(products, item.id);
 
+                //update diagram hash of category
+                let diagram_hash = getDiagramHash(res.body, products);
+                await Category.update({diagram_hash}, {where: {id: item.id}});
+
                 progress.tick();
                 callback();
             }
@@ -191,6 +199,20 @@ async function parseProducts(item, callback) {
                 return callback(true); //if any error retry
             }
         });
+}
+
+function getDiagramHash(html_page, products) {
+
+    let $ = cheerio.load(html_page);
+
+    let nav = $('.breadcrumb').find('a');
+
+    return hash({
+        make: nav.eq(1).text().toLowerCase(),
+        cat: nav.eq(2).text().toLowerCase(),
+        year: nav.eq(3).text().toLowerCase(),
+        products: products.map(product => product.sku)
+    });
 }
 
 module.exports = {
