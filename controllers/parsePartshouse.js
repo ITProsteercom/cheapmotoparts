@@ -139,7 +139,7 @@ function parseProducts(html_page) {
         make: nav.eq(0).text().toLowerCase(),
         cat: nav.eq(1).text().toLowerCase(),
         year: nav.eq(2).text().toLowerCase(),
-        products: products
+        products: products.sort()
     };
 }
 

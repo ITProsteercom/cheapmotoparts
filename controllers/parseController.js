@@ -203,15 +203,15 @@ async function parseProducts(item, callback) {
 
 function getDiagramHash(html_page, products) {
 
-    let $ = cheerio.load(html_page);
-
-    let nav = $('.breadcrumb').find('a');
+    let $ = cheerio.load(html_page),
+        nav = $('.breadcrumb').find('a'),
+        productsSku = products.map(product => product.sku);
 
     return hash({
         make: nav.eq(1).text().toLowerCase(),
         cat: nav.eq(2).text().toLowerCase(),
         year: nav.eq(3).text().toLowerCase(),
-        products: products.map(product => product.sku)
+        products: productsSku.sort()
     });
 }
 

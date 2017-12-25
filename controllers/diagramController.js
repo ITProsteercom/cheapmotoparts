@@ -7,7 +7,6 @@ const tress = require('tress');
 const Promise = require("bluebird");
 const path = require('path');
 const childProcess = require('child_process');
-const intersection = require('array-intersection');
 const fs = require('fs');
 
 const authController = require('./authController');
